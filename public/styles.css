@@ -24,7 +24,7 @@ a { color:var(--accent); text-decoration:none; }
 .auth-container { max-width:400px; margin:0 auto; padding:40px 24px; overflow-y:auto; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; }
 .auth-logo { position:relative; width:110px; height:110px; display:flex; align-items:center; justify-content:center; }
 .logo-glow { position:absolute; width:110px; height:110px; border-radius:50%; background:radial-gradient(circle,rgba(52,211,153,0.3),rgba(59,130,246,0.15),transparent); }
-.logo-icon { width:52px; height:52px; position:relative; z-index:1; }
+.logo-icon { width:80px; height:80px; position:relative; z-index:1; }
 .auth-title { font-size:1.8rem; font-weight:700; }
 .auth-subtitle { color:var(--subtle); font-size:0.9rem; }
 
