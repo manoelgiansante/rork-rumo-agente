@@ -168,7 +168,7 @@ struct SubscriptionView: View {
         isProcessing = true
         checkoutError = nil
 
-        guard let url = URL(string: "http://216.238.111.253/create-checkout") else {
+        guard let url = URL(string: Config.AGENT_BACKEND_URL + "/create-checkout") else {
             checkoutError = "URL do servidor inválida."
             isProcessing = false
             return
@@ -196,9 +196,12 @@ struct SubscriptionView: View {
                 return
             }
             if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let checkoutURLString = json["url"] as? String,
-               let checkoutURL = URL(string: checkoutURLString) {
-                openURL(checkoutURL)
+               let checkoutURLString = json["url"] as? String {
+                if let checkoutURL = URL(string: checkoutURLString) {
+                    openURL(checkoutURL)
+                } else {
+                    checkoutError = "Resposta inválida do servidor."
+                }
             } else {
                 checkoutError = "Resposta inválida do servidor."
             }
@@ -210,7 +213,7 @@ struct SubscriptionView: View {
 
     private func buyCredits(amount: Int) async {
         guard let user = supabase.currentUser else { return }
-        guard let url = URL(string: "http://216.238.111.253/buy-credits") else { return }
+        guard let url = URL(string: Config.AGENT_BACKEND_URL + "/buy-credits") else { return }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -230,9 +233,10 @@ struct SubscriptionView: View {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else { return }
             if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let checkoutURLString = json["url"] as? String,
-               let checkoutURL = URL(string: checkoutURLString) {
-                openURL(checkoutURL)
+               let checkoutURLString = json["url"] as? String {
+                if let checkoutURL = URL(string: checkoutURLString) {
+                    openURL(checkoutURL)
+                }
             }
         } catch {}
     }
