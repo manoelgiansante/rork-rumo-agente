@@ -5,7 +5,7 @@ import Foundation
 class ClaudeService {
     var isProcessing = false
 
-    private let backendURL = "http://216.238.111.253"
+    private let backendURL = Config.EXPO_PUBLIC_AGENT_BACKEND_URL
 
     func sendCommand(message: String, appContext: String?, conversationHistory: [ChatMessage], authToken: String?) async throws -> ChatMessage {
         isProcessing = true

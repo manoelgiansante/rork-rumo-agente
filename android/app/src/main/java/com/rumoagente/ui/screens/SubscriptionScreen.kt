@@ -55,7 +55,7 @@ fun SubscriptionScreen(
         ),
         PlanOption(
             name = "Starter",
-            price = "R\$ 49",
+            price = "R\$ 49,90",
             period = "/mes",
             credits = "50 creditos/mes",
             features = listOf("Chat avancado", "5 apps", "Visualizacao de tela", "Suporte email"),
@@ -64,7 +64,7 @@ fun SubscriptionScreen(
         ),
         PlanOption(
             name = "Pro",
-            price = "R\$ 149",
+            price = "R\$ 149,90",
             period = "/mes",
             credits = "200 creditos/mes",
             features = listOf("Tudo do Starter", "Apps ilimitados", "Controle remoto", "API access", "Suporte prioritario"),
@@ -72,7 +72,7 @@ fun SubscriptionScreen(
         ),
         PlanOption(
             name = "Enterprise",
-            price = "R\$ 499",
+            price = "R\$ 499,90",
             period = "/mes",
             credits = "Creditos ilimitados",
             features = listOf("Tudo do Pro", "Multi-agente", "SLA dedicado", "Onboarding", "Suporte 24/7"),

@@ -38,6 +38,13 @@
 
     <p id="auth-error" class="error-text" style="display:none"></p>
 
+    <div id="consent-checkbox" style="display:none; margin: 12px 0; font-size: 13px; color: #aaa;">
+      <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer;">
+        <input type="checkbox" id="consent-check" style="margin-top: 3px; accent-color: #34D399;">
+        <span>Li e concordo com a <a href="/privacidade" target="_blank" style="color: #34D399;">Politica de Privacidade</a> e os <a href="/termos" target="_blank" style="color: #34D399;">Termos de Uso</a>.</span>
+      </label>
+    </div>
+
     <button class="btn-primary" id="auth-submit-btn" onclick="handleAuth()">Entrar</button>
     <button class="btn-link" id="forgot-btn" onclick="forgotPassword()">Esqueci minha senha</button>
 
@@ -188,12 +195,12 @@
         <div class="settings-row"><span>🌐</span>Idioma<span class="subtle">Portugues</span><span class="chevron">›</span></div>
         <div class="settings-row"><span>🔔</span>Notificacoes<span class="subtle">Ativadas</span><span class="chevron">›</span></div>
         <div class="settings-row"><span>🎨</span>Aparencia<span class="subtle">Automatico</span><span class="chevron">›</span></div>
-        <div class="settings-row"><span>🔒</span>Privacidade<span class="chevron">›</span></div>
+        <div class="settings-row" onclick="window.open('/privacidade','_blank')" style="cursor:pointer"><span>🔒</span>Privacidade<span class="chevron">›</span></div>
 
         <h4 class="section-title">Suporte</h4>
         <div class="settings-row"><span>❓</span>Central de Ajuda<span class="chevron">›</span></div>
         <div class="settings-row"><span>✉️</span>Contato<span class="chevron">›</span></div>
-        <div class="settings-row"><span>📄</span>Termos de Uso<span class="chevron">›</span></div>
+        <div class="settings-row" onclick="window.open('/termos','_blank')" style="cursor:pointer"><span>📄</span>Termos de Uso<span class="chevron">›</span></div>
 
         <button class="btn-logout" onclick="logout()">🚪 Sair da Conta</button>
       </div>

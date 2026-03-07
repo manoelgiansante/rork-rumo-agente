@@ -21,11 +21,46 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.rumoagente.data.api.RetrofitInstance
+import com.rumoagente.data.models.AgentTask
+import com.rumoagente.data.models.UserProfile
 import com.rumoagente.ui.theme.RumoAgenteTheme
 import com.rumoagente.ui.theme.RumoColors
 
 @Composable
 fun DashboardScreen() {
+    var userName by remember { mutableStateOf("Usuario") }
+    var userInitial by remember { mutableStateOf("U") }
+    var credits by remember { mutableStateOf(0) }
+    var maxCredits by remember { mutableStateOf(10) }
+    var tasks by remember { mutableStateOf<List<AgentTask>>(emptyList()) }
+
+    LaunchedEffect(Unit) {
+        val token = RetrofitInstance.authToken ?: return@LaunchedEffect
+        try {
+            val profileResponse = RetrofitInstance.supabaseApi.getProfiles(
+                authorization = "Bearer $token"
+            )
+            if (profileResponse.isSuccessful) {
+                val profiles = profileResponse.body()
+                val profile = profiles?.firstOrNull()
+                if (profile != null) {
+                    userName = profile.displayName ?: profile.email.substringBefore("@")
+                    userInitial = userName.firstOrNull()?.uppercase() ?: "U"
+                    credits = profile.credits
+                }
+            }
+        } catch (_: Exception) { }
+        try {
+            val tasksResponse = RetrofitInstance.supabaseApi.getAgentTasks(
+                authorization = "Bearer $token"
+            )
+            if (tasksResponse.isSuccessful) {
+                tasks = tasksResponse.body() ?: emptyList()
+            }
+        } catch (_: Exception) { }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -44,7 +79,7 @@ fun DashboardScreen() {
         ) {
             Column {
                 Text(
-                    text = "Ola, Manoel",
+                    text = "Ola, $userName",
                     style = MaterialTheme.typography.headlineSmall,
                     color = Color.White,
                     fontWeight = FontWeight.Bold
@@ -67,7 +102,7 @@ fun DashboardScreen() {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "M",
+                    text = userInitial,
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     fontSize = 20.sp
@@ -157,13 +192,13 @@ fun DashboardScreen() {
                 ) {
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text(
-                            text = "47",
+                            text = "$credits",
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 36.sp
                         )
                         Text(
-                            text = " / 50",
+                            text = " / $maxCredits",
                             color = RumoColors.SubtleText,
                             fontSize = 16.sp,
                             modifier = Modifier.padding(bottom = 4.dp)
@@ -185,7 +220,7 @@ fun DashboardScreen() {
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 LinearProgressIndicator(
-                    progress = { 0.94f },
+                    progress = { if (maxCredits > 0) credits.toFloat() / maxCredits.toFloat() else 0f },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(6.dp)
@@ -248,38 +283,79 @@ fun DashboardScreen() {
         )
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Empty state
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, RumoColors.CardBorder, RoundedCornerShape(16.dp)),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = RumoColors.CardBg)
-        ) {
-            Column(
+        if (tasks.isEmpty()) {
+            // Empty state
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .border(1.dp, RumoColors.CardBorder, RoundedCornerShape(16.dp)),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = RumoColors.CardBg)
             ) {
-                Icon(
-                    Icons.Default.Inbox,
-                    contentDescription = null,
-                    tint = RumoColors.SubtleText,
-                    modifier = Modifier.size(48.dp)
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = "Nenhuma tarefa recente",
-                    color = RumoColors.SubtleText,
-                    fontSize = 14.sp
-                )
-                Text(
-                    text = "Inicie uma conversa para comecar",
-                    color = RumoColors.SubtleText.copy(alpha = 0.6f),
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        Icons.Default.Inbox,
+                        contentDescription = null,
+                        tint = RumoColors.SubtleText,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Nenhuma tarefa recente",
+                        color = RumoColors.SubtleText,
+                        fontSize = 14.sp
+                    )
+                    Text(
+                        text = "Inicie uma conversa para comecar",
+                        color = RumoColors.SubtleText.copy(alpha = 0.6f),
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            }
+        } else {
+            tasks.take(5).forEach { task ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .border(1.dp, RumoColors.CardBorder, RoundedCornerShape(12.dp)),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = RumoColors.CardBg)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = task.title,
+                                color = Color.White,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = task.status.name.lowercase()
+                                    .replaceFirstChar { it.uppercase() },
+                                color = RumoColors.SubtleText,
+                                fontSize = 12.sp
+                            )
+                        }
+                        Text(
+                            text = "-${task.creditsUsed}",
+                            color = RumoColors.AccentBlue,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
             }
         }
 

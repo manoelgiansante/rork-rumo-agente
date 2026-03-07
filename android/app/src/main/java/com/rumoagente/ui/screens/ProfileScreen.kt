@@ -24,6 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.rumoagente.data.api.RetrofitInstance
+import com.rumoagente.data.models.UserProfile
 import com.rumoagente.ui.theme.RumoAgenteTheme
 import com.rumoagente.ui.theme.RumoColors
 
@@ -32,6 +34,32 @@ fun ProfileScreen(
     onNavigateToSubscription: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
+    var displayName by remember { mutableStateOf("Carregando...") }
+    var displayEmail by remember { mutableStateOf("") }
+    var displayPlan by remember { mutableStateOf("Free") }
+    var displayCredits by remember { mutableStateOf(0) }
+    var displayInitial by remember { mutableStateOf("?") }
+
+    LaunchedEffect(Unit) {
+        val token = RetrofitInstance.authToken ?: return@LaunchedEffect
+        try {
+            val response = RetrofitInstance.supabaseApi.getProfiles(
+                authorization = "Bearer $token"
+            )
+            if (response.isSuccessful) {
+                val profile = response.body()?.firstOrNull()
+                if (profile != null) {
+                    displayName = profile.displayName ?: profile.email.substringBefore("@")
+                    displayEmail = profile.email
+                    displayPlan = profile.plan.lowercase()
+                        .replaceFirstChar { it.uppercase() }
+                    displayCredits = profile.credits
+                    displayInitial = displayName.firstOrNull()?.uppercase() ?: "?"
+                }
+            }
+        } catch (_: Exception) { }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -60,7 +88,7 @@ fun ProfileScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "M",
+                    text = displayInitial,
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     fontSize = 36.sp
@@ -70,13 +98,13 @@ fun ProfileScreen(
             Spacer(modifier = Modifier.height(14.dp))
 
             Text(
-                text = "Manoel Nascimento",
+                text = displayName,
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp
             )
             Text(
-                text = "manoel@rumoagente.com",
+                text = displayEmail,
                 color = RumoColors.SubtleText,
                 fontSize = 14.sp,
                 modifier = Modifier.padding(top = 4.dp)
@@ -121,13 +149,13 @@ fun ProfileScreen(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = "Plano Starter",
+                            text = "Plano $displayPlan",
                             color = Color.White,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 15.sp
                         )
                         Text(
-                            text = "47 creditos restantes",
+                            text = "$displayCredits creditos restantes",
                             color = RumoColors.Accent,
                             fontSize = 12.sp
                         )
@@ -198,7 +226,10 @@ fun ProfileScreen(
 
         // Logout button
         Button(
-            onClick = onLogout,
+            onClick = {
+                RetrofitInstance.authToken = null
+                onLogout()
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)

@@ -23,6 +23,12 @@ class SupabaseService {
         set { UserDefaults.standard.set(newValue, forKey: "auth_token") }
     }
 
+    // NOTE: For production, refresh_token should be stored in Keychain instead of UserDefaults
+    private var refreshToken: String? {
+        get { UserDefaults.standard.string(forKey: "refresh_token") }
+        set { UserDefaults.standard.set(newValue, forKey: "refresh_token") }
+    }
+
     func signUp(email: String, password: String, displayName: String) async throws {
         let url = URL(string: "\(baseURL)/auth/v1/signup")!
         var request = URLRequest(url: url)
@@ -46,6 +52,7 @@ class SupabaseService {
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
         if let accessToken = json?["access_token"] as? String {
             authToken = accessToken
+            refreshToken = json?["refresh_token"] as? String
             await loadUserProfile()
         }
     }
@@ -69,12 +76,14 @@ class SupabaseService {
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
         if let accessToken = json?["access_token"] as? String {
             authToken = accessToken
+            refreshToken = json?["refresh_token"] as? String
             await loadUserProfile()
         }
     }
 
     func signOut() {
         authToken = nil
+        refreshToken = nil
         currentUser = nil
         isAuthenticated = false
     }
@@ -82,6 +91,37 @@ class SupabaseService {
     func checkSession() async {
         guard authToken != nil else { return }
         await loadUserProfile()
+        if !isAuthenticated {
+            // Token may have expired, try refreshing
+            if await refreshSession() {
+                await loadUserProfile()
+            }
+        }
+    }
+
+    func refreshSession() async -> Bool {
+        guard let token = refreshToken else { return false }
+        let url = URL(string: "\(baseURL)/auth/v1/token?grant_type=refresh_token")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(anonKey, forHTTPHeaderField: "apikey")
+
+        let body: [String: String] = ["refresh_token": token]
+        do {
+            request.httpBody = try JSONEncoder().encode(body)
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                return false
+            }
+            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            if let accessToken = json?["access_token"] as? String {
+                authToken = accessToken
+                refreshToken = json?["refresh_token"] as? String ?? token
+                return true
+            }
+        } catch {}
+        return false
     }
 
     private func loadUserProfile() async {
@@ -144,6 +184,7 @@ class SupabaseService {
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
         if let accessToken = json?["access_token"] as? String {
             authToken = accessToken
+            refreshToken = json?["refresh_token"] as? String
             if let name = fullName {
                 try? await updateUserMetadata(displayName: name)
             }
@@ -179,6 +220,7 @@ class SupabaseService {
 
         if let accessToken = params["access_token"] {
             authToken = accessToken
+            refreshToken = params["refresh_token"]
             await loadUserProfile()
         } else {
             throw ServiceError.authError("Token não encontrado na resposta")
@@ -204,6 +246,7 @@ class SupabaseService {
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
         if let accessToken = json?["access_token"] as? String {
             authToken = accessToken
+            refreshToken = json?["refresh_token"] as? String
             await loadUserProfile()
         }
     }
@@ -241,7 +284,7 @@ class SupabaseService {
 
     func fetchProfile() async {
         guard let token = authToken, let userId = currentUser?.id else { return }
-        let urlString = "\(baseURL)/rest/v1/profiles?id=eq.\(userId)&select=*&limit=1"
+        let urlString = "\(baseURL)/rest/v1/profiles?user_id=eq.\(userId)&select=*&limit=1"
         guard let url = URL(string: urlString) else { return }
 
         var request = URLRequest(url: url)
@@ -280,6 +323,27 @@ class SupabaseService {
         } catch {
             return []
         }
+    }
+
+    func deleteAccount() async throws {
+        guard let token = authToken else {
+            throw ServiceError.authError("Usuário não autenticado")
+        }
+
+        let url = URL(string: "https://rork-rumo-agente.vercel.app/api/delete-account")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            let errorBody = String(data: data, encoding: .utf8) ?? "Erro desconhecido"
+            throw ServiceError.authError("Falha ao excluir conta: \(errorBody)")
+        }
+
+        signOut()
     }
 
     func fetchApps() async -> [CloudApp] {

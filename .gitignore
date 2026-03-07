@@ -33,3 +33,4 @@ core
 node_modules
 .expo
 .vercel
+.env*.local

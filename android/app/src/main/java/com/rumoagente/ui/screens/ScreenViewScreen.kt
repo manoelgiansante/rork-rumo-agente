@@ -25,16 +25,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.rumoagente.data.api.Config
+import com.rumoagente.data.api.RetrofitInstance
 import com.rumoagente.ui.theme.RumoAgenteTheme
 import com.rumoagente.ui.theme.RumoColors
 import kotlinx.coroutines.delay
-
-private const val AGENT_URL = "http://216.238.111.253"
+import kotlinx.coroutines.launch
 
 @Composable
 fun ScreenViewScreen() {
     var isConnected by remember { mutableStateOf(false) }
+    var isConnecting by remember { mutableStateOf(false) }
     var screenshotKey by remember { mutableIntStateOf(0) }
+    var errorText by remember { mutableStateOf<String?>(null) }
+    val coroutineScope = rememberCoroutineScope()
 
     // Auto-reload screenshot every 1.5s when connected
     LaunchedEffect(isConnected) {
@@ -81,7 +85,33 @@ fun ScreenViewScreen() {
                 }
 
                 Button(
-                    onClick = { isConnected = !isConnected },
+                    onClick = {
+                        if (isConnected) {
+                            isConnected = false
+                            errorText = null
+                        } else {
+                            isConnecting = true
+                            errorText = null
+                            coroutineScope.launch {
+                                try {
+                                    val statusResponse = RetrofitInstance.agentApi.getStatus()
+                                    if (statusResponse.isSuccessful) {
+                                        val status = statusResponse.body()
+                                        if (status?.desktop != "running") {
+                                            RetrofitInstance.agentApi.startDesktop()
+                                        }
+                                        isConnected = true
+                                    } else {
+                                        errorText = "Agente indisponivel (${statusResponse.code()})"
+                                    }
+                                } catch (e: Exception) {
+                                    errorText = "Erro de conexao: ${e.localizedMessage ?: "Tente novamente"}"
+                                } finally {
+                                    isConnecting = false
+                                }
+                            }
+                        }
+                    },
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (isConnected) RumoColors.Red.copy(alpha = 0.15f)
@@ -108,6 +138,16 @@ fun ScreenViewScreen() {
 
         HorizontalDivider(color = RumoColors.CardBorder)
 
+        // Error message
+        if (errorText != null) {
+            Text(
+                text = errorText!!,
+                color = RumoColors.Red,
+                fontSize = 13.sp,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+            )
+        }
+
         // Content area
         Box(
             modifier = Modifier
@@ -130,7 +170,7 @@ fun ScreenViewScreen() {
                     ) {
                         AsyncImage(
                             model = ImageRequest.Builder(LocalContext.current)
-                                .data("$AGENT_URL/screenshot?t=$screenshotKey")
+                                .data("${Config.AGENT_URL}/screenshot?t=$screenshotKey")
                                 .crossfade(true)
                                 .build(),
                             contentDescription = "Tela do agente",

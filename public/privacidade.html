@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Politica de Privacidade - Rumo Agente</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0a0a0f;
+    color: #e0e0e0;
+    line-height: 1.7;
+    padding: 0;
+  }
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+  .back-link {
+    display: inline-block;
+    color: #34D399;
+    text-decoration: none;
+    margin-bottom: 24px;
+    font-size: 14px;
+  }
+  .back-link:hover { text-decoration: underline; }
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #34D399, #3B82F6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+  .last-updated {
+    color: #888;
+    font-size: 14px;
+    margin-bottom: 32px;
+  }
+  h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #f0f0f0;
+    margin-top: 32px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #1a1a2e;
+  }
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #d0d0d0;
+    margin-top: 20px;
+    margin-bottom: 8px;
+  }
+  p { margin-bottom: 12px; color: #c0c0c0; }
+  ul {
+    margin: 12px 0;
+    padding-left: 24px;
+  }
+  li {
+    margin-bottom: 8px;
+    color: #c0c0c0;
+  }
+  a { color: #34D399; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { color: #e0e0e0; }
+  .highlight-box {
+    background: #111128;
+    border: 1px solid #1a1a3e;
+    border-radius: 12px;
+    padding: 20px;
+    margin: 16px 0;
+  }
+  .footer-note {
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid #1a1a2e;
+    color: #888;
+    font-size: 13px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="/" class="back-link">&larr; Voltar ao Rumo Agente</a>
+
+  <h1>Politica de Privacidade</h1>
+  <p class="last-updated">Ultima atualizacao: 07 de marco de 2026</p>
+
+  <p>A <strong>Rumo Agente</strong> ("nos", "nosso" ou "AgroRumo") respeita a privacidade dos seus usuarios e esta comprometida com a protecao dos dados pessoais. Esta Politica de Privacidade descreve como coletamos, utilizamos, armazenamos e compartilhamos suas informacoes quando voce utiliza nossa plataforma.</p>
+
+  <h2>1. Informacoes que Coletamos</h2>
+
+  <h3>1.1 Dados fornecidos por voce</h3>
+  <ul>
+    <li><strong>Nome completo:</strong> fornecido no momento do cadastro.</li>
+    <li><strong>Endereco de e-mail:</strong> utilizado para autenticacao e comunicacao.</li>
+    <li><strong>Dados de pagamento:</strong> processados de forma segura pelo Stripe. Nao armazenamos numeros de cartao de credito em nossos servidores.</li>
+  </ul>
+
+  <h3>1.2 Dados gerados pelo uso</h3>
+  <ul>
+    <li><strong>Mensagens de chat:</strong> as conversas que voce mantem com o agente de IA sao armazenadas para fornecer historico e melhorar o servico.</li>
+    <li><strong>Dados de uso:</strong> informacoes sobre como voce interage com a plataforma, incluindo funcionalidades utilizadas, creditos consumidos e tarefas executadas.</li>
+    <li><strong>Dados de autenticacao:</strong> tokens de sessao armazenados no localStorage do navegador.</li>
+  </ul>
+
+  <h2>2. Finalidade do Tratamento de Dados</h2>
+  <p>Utilizamos seus dados pessoais para:</p>
+  <ul>
+    <li>Fornecer, operar e manter nossos servicos de automacao e assistencia via inteligencia artificial.</li>
+    <li>Processar pagamentos e gerenciar assinaturas.</li>
+    <li>Gerenciar creditos e transacoes na plataforma.</li>
+    <li>Enviar comunicacoes relacionadas ao servico (atualizacoes, alertas de seguranca).</li>
+    <li>Melhorar e personalizar a experiencia do usuario.</li>
+    <li>Cumprir obrigacoes legais e regulatorias.</li>
+  </ul>
+
+  <h2>3. Compartilhamento de Dados com Terceiros</h2>
+  <p>Seus dados podem ser compartilhados com os seguintes processadores de dados, estritamente para a prestacao dos servicos:</p>
+
+  <div class="highlight-box">
+    <ul>
+      <li><strong>Supabase</strong> - Banco de dados e autenticacao. Armazena dados de perfil, conversas e transacoes.</li>
+      <li><strong>Stripe</strong> - Processamento de pagamentos. Recebe dados necessarios para cobrancas e assinaturas.</li>
+      <li><strong>Anthropic (Claude)</strong> - Processamento de inteligencia artificial. As mensagens enviadas ao agente sao processadas pela API da Anthropic.</li>
+      <li><strong>Vercel</strong> - Hospedagem da aplicacao e execucao de funcoes serverless.</li>
+    </ul>
+  </div>
+
+  <p>Nao vendemos, alugamos ou compartilhamos seus dados pessoais com terceiros para fins de marketing.</p>
+
+  <h2>4. Armazenamento e Seguranca dos Dados</h2>
+  <p>Seus dados sao armazenados em servidores localizados nos <strong>Estados Unidos da America</strong>, atraves dos servicos Supabase e Vercel. Adotamos medidas tecnicas e organizacionais adequadas para proteger seus dados contra acesso nao autorizado, perda ou destruicao, incluindo:</p>
+  <ul>
+    <li>Criptografia em transito (HTTPS/TLS).</li>
+    <li>Autenticacao segura com tokens.</li>
+    <li>Controle de acesso restrito aos dados.</li>
+  </ul>
+
+  <h2>5. Seus Direitos (LGPD)</h2>
+  <p>De acordo com a Lei Geral de Protecao de Dados (Lei n. 13.709/2018), voce possui os seguintes direitos em relacao aos seus dados pessoais:</p>
+  <ul>
+    <li><strong>Acesso:</strong> solicitar informacoes sobre quais dados pessoais seus estao sendo tratados.</li>
+    <li><strong>Correcao:</strong> solicitar a correcao de dados incompletos, inexatos ou desatualizados.</li>
+    <li><strong>Exclusao:</strong> solicitar a eliminacao de dados pessoais tratados com base no seu consentimento.</li>
+    <li><strong>Portabilidade:</strong> solicitar a transferencia dos seus dados a outro fornecedor de servico.</li>
+    <li><strong>Revogacao do consentimento:</strong> retirar o consentimento a qualquer momento, sem comprometer a licitude do tratamento realizado anteriormente.</li>
+    <li><strong>Informacao sobre compartilhamento:</strong> solicitar informacoes sobre com quais entidades seus dados foram compartilhados.</li>
+    <li><strong>Oposicao:</strong> opor-se ao tratamento de dados quando realizado em desconformidade com a LGPD.</li>
+  </ul>
+
+  <h2>6. Retencao de Dados</h2>
+  <p>Seus dados pessoais serao mantidos enquanto sua conta estiver ativa em nossa plataforma. Caso voce solicite a exclusao da sua conta, todos os seus dados serao <strong>permanentemente deletados em ate 30 (trinta) dias</strong> apos a solicitacao.</p>
+  <p>Dados necessarios para cumprimento de obrigacoes legais, fiscais ou regulatorias poderao ser mantidos pelo periodo exigido pela legislacao aplicavel.</p>
+
+  <h2>7. Cookies e Armazenamento Local</h2>
+  <p>Utilizamos <strong>localStorage</strong> do navegador exclusivamente para fins de autenticacao, mantendo sua sessao ativa enquanto voce utiliza a plataforma. Nao utilizamos cookies de rastreamento ou de terceiros para fins de publicidade.</p>
+
+  <h2>8. Encarregado de Protecao de Dados (DPO)</h2>
+  <p>Para exercer seus direitos previstos na LGPD ou para quaisquer duvidas relacionadas ao tratamento de seus dados pessoais, entre em contato com nosso Encarregado de Protecao de Dados:</p>
+  <div class="highlight-box">
+    <p><strong>E-mail:</strong> <a href="mailto:contato@rumoagente.com.br">contato@rumoagente.com.br</a></p>
+  </div>
+
+  <h2>9. Alteracoes nesta Politica</h2>
+  <p>Reservamo-nos o direito de atualizar esta Politica de Privacidade a qualquer momento. Notificaremos os usuarios sobre alteracoes significativas por meio de aviso na plataforma ou por e-mail. O uso continuado da plataforma apos tais alteracoes constitui aceite da politica atualizada.</p>
+  <p>Recomendamos que voce revise esta politica periodicamente para se manter informado sobre como estamos protegendo seus dados.</p>
+
+  <h2>10. Legislacao Aplicavel</h2>
+  <p>Esta Politica de Privacidade e regida pelas leis da Republica Federativa do Brasil, em especial a Lei Geral de Protecao de Dados (LGPD - Lei n. 13.709/2018).</p>
+
+  <div class="footer-note">
+    <p>Rumo Agente - AgroRumo &copy; 2026. Todos os direitos reservados.</p>
+    <p><a href="mailto:contato@rumoagente.com.br">contato@rumoagente.com.br</a></p>
+  </div>
+</div>
+</body>
+</html>

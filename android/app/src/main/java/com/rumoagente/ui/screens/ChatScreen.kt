@@ -24,6 +24,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.rumoagente.data.api.RetrofitInstance
+import com.rumoagente.data.models.ChatMessage
+import com.rumoagente.data.models.MessageRole
 import com.rumoagente.ui.theme.RumoAgenteTheme
 import com.rumoagente.ui.theme.RumoColors
 import kotlinx.coroutines.delay
@@ -31,7 +34,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
-data class UiUiChatMessage(
+data class UiChatMessage(
     val id: String = UUID.randomUUID().toString(),
     val content: String,
     val isUser: Boolean,
@@ -174,14 +177,43 @@ fun ChatScreen() {
 
                                 coroutineScope.launch {
                                     listState.animateScrollToItem(messages.size - 1)
-                                    delay(1500)
-                                    isTyping = false
-                                    messages.add(
-                                        UiChatMessage(
-                                            content = "Entendi! Vou processar sua solicitacao: \"$userMsg\". Aguarde um momento...",
-                                            isUser = false
+                                    try {
+                                        val apiMessages = messages.map { msg ->
+                                            ChatMessage(
+                                                role = if (msg.isUser) MessageRole.USER else MessageRole.ASSISTANT,
+                                                content = msg.content
+                                            )
+                                        }
+                                        val token = RetrofitInstance.authToken ?: ""
+                                        val response = RetrofitInstance.chatApi.chat(
+                                            authorization = "Bearer $token",
+                                            messages = apiMessages
                                         )
-                                    )
+                                        isTyping = false
+                                        if (response.isSuccessful && response.body() != null) {
+                                            messages.add(
+                                                UiChatMessage(
+                                                    content = response.body()!!.message,
+                                                    isUser = false
+                                                )
+                                            )
+                                        } else {
+                                            messages.add(
+                                                UiChatMessage(
+                                                    content = "Erro ao processar sua mensagem. Tente novamente.",
+                                                    isUser = false
+                                                )
+                                            )
+                                        }
+                                    } catch (e: Exception) {
+                                        isTyping = false
+                                        messages.add(
+                                            UiChatMessage(
+                                                content = "Erro de conexao: ${e.localizedMessage ?: "Tente novamente."}",
+                                                isUser = false
+                                            )
+                                        )
+                                    }
                                     delay(100)
                                     listState.animateScrollToItem(messages.size - 1)
                                 }

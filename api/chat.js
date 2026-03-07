@@ -16,6 +16,38 @@ export default async function handler(req, res) {
   try {
     const { messages, conversationId } = req.body;
 
+    // Validate messages is an array
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ error: 'messages deve ser um array nao vazio' });
+    }
+
+    // Limit messages array to max 50 items
+    if (messages.length > 50) {
+      return res.status(400).json({ error: 'Maximo de 50 mensagens por requisicao' });
+    }
+
+    // Validate each message
+    const allowedRoles = ['user', 'assistant'];
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+
+      if (!msg || typeof msg !== 'object') {
+        return res.status(400).json({ error: `Mensagem ${i} invalida` });
+      }
+
+      if (!allowedRoles.includes(msg.role)) {
+        return res.status(400).json({ error: `Mensagem ${i}: role deve ser "user" ou "assistant"` });
+      }
+
+      if (typeof msg.content !== 'string' || msg.content.trim().length === 0) {
+        return res.status(400).json({ error: `Mensagem ${i}: content deve ser uma string nao vazia` });
+      }
+
+      if (msg.content.length > 10000) {
+        return res.status(400).json({ error: `Mensagem ${i}: content excede o limite de 10000 caracteres` });
+      }
+    }
+
     const { data: profile } = await supabase
       .from('profiles').select('credits').eq('user_id', user.id).single();
 

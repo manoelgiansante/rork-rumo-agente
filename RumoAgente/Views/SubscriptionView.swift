@@ -164,81 +164,13 @@ struct SubscriptionView: View {
     }
 
     private func subscribe(plan: SubscriptionPlan) async {
-        guard let user = supabase.currentUser else { return }
-        isProcessing = true
-        checkoutError = nil
-
-        guard let url = URL(string: Config.EXPO_PUBLIC_AGENT_BACKEND_URL + "/create-checkout") else {
-            checkoutError = "URL do servidor inválida."
-            isProcessing = false
-            return
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        if let token = supabase.authTokenValue {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-
-        let body: [String: String] = [
-            "userId": user.id,
-            "plan": plan.rawValue,
-            "email": user.email
-        ]
-        request.httpBody = try? JSONEncoder().encode(body)
-
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-                checkoutError = "Erro ao criar sessão de pagamento."
-                isProcessing = false
-                return
-            }
-            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let checkoutURLString = json["url"] as? String {
-                if let checkoutURL = URL(string: checkoutURLString) {
-                    openURL(checkoutURL)
-                } else {
-                    checkoutError = "Resposta inválida do servidor."
-                }
-            } else {
-                checkoutError = "Resposta inválida do servidor."
-            }
-        } catch {
-            checkoutError = "Erro de conexão: \(error.localizedDescription)"
-        }
-        isProcessing = false
+        guard let webURL = URL(string: "https://rork-rumo-agente.vercel.app/#subscription") else { return }
+        openURL(webURL)
     }
 
     private func buyCredits(amount: Int) async {
-        guard let user = supabase.currentUser else { return }
-        guard let url = URL(string: Config.EXPO_PUBLIC_AGENT_BACKEND_URL + "/buy-credits") else { return }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        if let token = supabase.authTokenValue {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-
-        let body: [String: Any] = [
-            "userId": user.id as Any,
-            "amount": amount as Any,
-            "email": user.email as Any
-        ]
-        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else { return }
-            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let checkoutURLString = json["url"] as? String {
-                if let checkoutURL = URL(string: checkoutURLString) {
-                    openURL(checkoutURL)
-                }
-            }
-        } catch {}
+        guard let webURL = URL(string: "https://rork-rumo-agente.vercel.app/#subscription") else { return }
+        openURL(webURL)
     }
 }
 

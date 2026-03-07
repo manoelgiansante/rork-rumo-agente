@@ -49,6 +49,7 @@ function toggleAuthMode(e) {
   document.getElementById('toggle-text').textContent = isSignUp ? 'Ja tem conta?' : 'Nao tem conta?';
   document.getElementById('toggle-link').textContent = isSignUp ? 'Entrar' : 'Criar conta';
   document.getElementById('forgot-btn').style.display = isSignUp ? 'none' : 'block';
+  document.getElementById('consent-checkbox').style.display = isSignUp ? 'block' : 'none';
   document.getElementById('auth-error').style.display = 'none';
 }
 
@@ -62,6 +63,10 @@ async function handleAuth() {
   const email = document.getElementById('auth-email').value.trim();
   const password = document.getElementById('auth-password').value;
   if (!email || !password) return showAuthError('Preencha todos os campos');
+
+  if (isSignUp && !document.getElementById('consent-check').checked) {
+    return showAuthError('Voce deve concordar com a Politica de Privacidade e os Termos de Uso.');
+  }
 
   const btn = document.getElementById('auth-submit-btn');
   btn.disabled = true;
@@ -163,7 +168,7 @@ async function loadProfile() {
   const user = await res.json();
 
   // Fetch profile from DB
-  const profileRes = await fetch(SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id + '&select=*', {
+  const profileRes = await fetch(SUPABASE_URL + '/rest/v1/profiles?user_id=eq.' + user.id + '&select=*', {
     headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + authToken }
   });
   const profiles = await profileRes.json();

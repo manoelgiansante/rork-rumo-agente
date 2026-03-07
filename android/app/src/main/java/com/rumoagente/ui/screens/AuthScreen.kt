@@ -36,19 +36,27 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.rumoagente.data.repository.AuthRepository
 import com.rumoagente.ui.theme.RumoAgenteTheme
 import com.rumoagente.ui.theme.RumoColors
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
 
 @Composable
 fun AuthScreen(
     onAuthSuccess: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val authRepository = remember { AuthRepository(context) }
+    val coroutineScope = rememberCoroutineScope()
+
     var isLogin by remember { mutableStateOf(true) }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
@@ -239,7 +247,20 @@ fun AuthScreen(
         // Forgot password
         if (isLogin) {
             TextButton(
-                onClick = { /* TODO: forgot password */ },
+                onClick = {
+                    if (email.isNotBlank()) {
+                        coroutineScope.launch {
+                            val result = authRepository.recoverPassword(email.trim())
+                            errorMessage = if (result.isSuccess) {
+                                "Email de recuperacao enviado para $email"
+                            } else {
+                                result.exceptionOrNull()?.localizedMessage ?: "Erro ao enviar email"
+                            }
+                        }
+                    } else {
+                        errorMessage = "Preencha o email para recuperar a senha"
+                    }
+                },
                 modifier = Modifier.align(Alignment.End)
             ) {
                 Text(
@@ -254,11 +275,38 @@ fun AuthScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // Error message
+        if (errorMessage != null) {
+            Text(
+                text = errorMessage!!,
+                color = RumoColors.Red,
+                fontSize = 13.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+            )
+        }
+
         // Primary button
         Button(
             onClick = {
+                errorMessage = null
                 isLoading = true
-                onAuthSuccess()
+                coroutineScope.launch {
+                    val result = if (isLogin) {
+                        authRepository.signIn(email.trim(), password)
+                    } else {
+                        authRepository.signUp(email.trim(), password)
+                    }
+                    isLoading = false
+                    if (result.isSuccess) {
+                        onAuthSuccess()
+                    } else {
+                        errorMessage = result.exceptionOrNull()?.localizedMessage
+                            ?: "Erro ao autenticar"
+                    }
+                }
             },
             modifier = Modifier
                 .fillMaxWidth()

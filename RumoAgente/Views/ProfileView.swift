@@ -4,6 +4,9 @@ struct ProfileView: View {
     let supabase: SupabaseService
     @State private var showSubscription = false
     @State private var showLogoutAlert = false
+    @State private var showDeleteAlert = false
+    @State private var isDeletingAccount = false
+    @State private var deleteError: String?
 
     var body: some View {
         NavigationStack {
@@ -17,6 +20,7 @@ struct ProfileView: View {
                         settingsSection
                         supportSection
                         logoutButton
+                        deleteAccountButton
                     }
                     .padding(.horizontal, 16)
                     .padding(.bottom, 32)
@@ -31,6 +35,27 @@ struct ProfileView: View {
                 Button("Sair", role: .destructive) { supabase.signOut() }
             } message: {
                 Text("Você precisará fazer login novamente.")
+            }
+            .alert("Excluir conta?", isPresented: $showDeleteAlert) {
+                Button("Cancelar", role: .cancel) {}
+                Button("Excluir", role: .destructive) {
+                    Task {
+                        isDeletingAccount = true
+                        do {
+                            try await supabase.deleteAccount()
+                        } catch {
+                            deleteError = error.localizedDescription
+                        }
+                        isDeletingAccount = false
+                    }
+                }
+            } message: {
+                Text("Esta ação é irreversível. Todos os seus dados serão apagados permanentemente.")
+            }
+            .alert("Erro ao excluir conta", isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(deleteError ?? "")
             }
         }
         .preferredColorScheme(.dark)
@@ -135,6 +160,25 @@ struct ProfileView: View {
             .padding(.vertical, 16)
             .background(Color.red.opacity(0.08), in: .rect(cornerRadius: 14))
         }
+    }
+
+    private var deleteAccountButton: some View {
+        Button {
+            showDeleteAlert = true
+        } label: {
+            HStack {
+                if isDeletingAccount {
+                    ProgressView().tint(.red)
+                }
+                Image(systemName: "trash.fill")
+                Text("Excluir Conta")
+            }
+            .font(.body.weight(.medium))
+            .foregroundStyle(.red.opacity(0.7))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+        }
+        .disabled(isDeletingAccount)
     }
 }
 

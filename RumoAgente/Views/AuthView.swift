@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AuthView: View {
     @State private var viewModel: AuthViewModel
+    @State private var agreedToTerms = false
     @FocusState private var focusedField: AuthField?
 
     enum AuthField { case name, email, password }
@@ -96,6 +97,25 @@ struct AuthView: View {
                             .padding(.horizontal, 24)
                     }
 
+                    if viewModel.isSignUp {
+                        HStack(alignment: .top, spacing: 10) {
+                            Button {
+                                agreedToTerms.toggle()
+                            } label: {
+                                Image(systemName: agreedToTerms ? "checkmark.square.fill" : "square")
+                                    .font(.title3)
+                                    .foregroundStyle(agreedToTerms ? Theme.accent : Theme.subtleText)
+                            }
+
+                            Text("Li e concordo com a [Política de Privacidade](https://rork-rumo-agente.vercel.app/privacidade) e os [Termos de Uso](https://rork-rumo-agente.vercel.app/termos)")
+                                .font(.caption)
+                                .foregroundStyle(Theme.subtleText)
+                                .tint(Theme.accentBlue)
+                                .multilineTextAlignment(.leading)
+                        }
+                        .padding(.horizontal, 24)
+                    }
+
                     VStack(spacing: 12) {
                         Button {
                             Task {
@@ -116,9 +136,9 @@ struct AuthView: View {
                             .foregroundStyle(.black)
                             .frame(maxWidth: .infinity)
                             .frame(height: 56)
-                            .background(Theme.accent, in: .rect(cornerRadius: 16))
+                            .background(Theme.accent.opacity(viewModel.isSignUp && !agreedToTerms ? 0.4 : 1.0), in: .rect(cornerRadius: 16))
                         }
-                        .disabled(viewModel.isLoading)
+                        .disabled(viewModel.isLoading || (viewModel.isSignUp && !agreedToTerms))
                         .padding(.horizontal, 24)
 
                         if !viewModel.isSignUp {
