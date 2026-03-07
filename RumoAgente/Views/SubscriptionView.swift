@@ -178,6 +178,9 @@ struct SubscriptionView: View {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let token = supabase.authTokenValue {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
 
         let body: [String: String] = [
             "userId": user.id,
@@ -213,6 +216,9 @@ struct SubscriptionView: View {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let token = supabase.authTokenValue {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
 
         let body: [String: Any] = [
             "userId": user.id,

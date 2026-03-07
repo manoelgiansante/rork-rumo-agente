@@ -42,7 +42,8 @@ class ChatViewModel {
             let response = try await claudeService.sendCommand(
                 message: text,
                 appContext: selectedApp?.name,
-                conversationHistory: messages
+                conversationHistory: messages,
+                authToken: supabase.authTokenValue
             )
             messages.append(response)
         } catch {

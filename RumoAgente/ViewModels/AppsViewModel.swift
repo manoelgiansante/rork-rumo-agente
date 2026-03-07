@@ -19,7 +19,7 @@ class AppsViewModel {
         CloudApp(id: "7", name: "WhatsApp Web", iconName: "message.fill", status: .installed, category: .communication, isSelected: false),
         CloudApp(id: "8", name: "Slack", iconName: "bubble.left.and.bubble.right.fill", status: .notInstalled, category: .communication, isSelected: false),
         CloudApp(id: "9", name: "Siagri", iconName: "building.2.fill", status: .installed, category: .agro, isSelected: false),
-        CloudApp(id: "10", name: "Totvs Agro", iconName: "tractor.fill", status: .notInstalled, category: .agro, isSelected: false),
+        CloudApp(id: "10", name: "Totvs Agro", iconName: "shippingbox.fill", status: .notInstalled, category: .agro, isSelected: false),
     ]
 
     func loadApps() async {

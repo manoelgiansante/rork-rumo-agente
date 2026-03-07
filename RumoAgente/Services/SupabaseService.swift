@@ -14,6 +14,10 @@ class SupabaseService {
         self.anonKey = Config.EXPO_PUBLIC_SUPABASE_ANON_KEY
     }
 
+    var authTokenValue: String? {
+        UserDefaults.standard.string(forKey: "auth_token")
+    }
+
     private var authToken: String? {
         get { UserDefaults.standard.string(forKey: "auth_token") }
         set { UserDefaults.standard.set(newValue, forKey: "auth_token") }

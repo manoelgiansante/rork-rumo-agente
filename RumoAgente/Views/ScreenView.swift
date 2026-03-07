@@ -1,5 +1,4 @@
 import SwiftUI
-import WebKit
 
 struct ScreenView: View {
     let supabase: SupabaseService
