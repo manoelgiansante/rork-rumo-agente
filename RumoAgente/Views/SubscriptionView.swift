@@ -168,8 +168,7 @@ struct SubscriptionView: View {
         isProcessing = true
         checkoutError = nil
 
-        let backendURL = "http://216.238.111.253"
-        guard let url = URL(string: backendURL + "/create-checkout") else {
+        guard let url = URL(string: Config.AGENT_BACKEND_URL + "/create-checkout") else {
             checkoutError = "URL do servidor inválida."
             isProcessing = false
             return
@@ -214,8 +213,7 @@ struct SubscriptionView: View {
 
     private func buyCredits(amount: Int) async {
         guard let user = supabase.currentUser else { return }
-        let backendURL = "http://216.238.111.253"
-        guard let url = URL(string: backendURL + "/buy-credits") else { return }
+        guard let url = URL(string: Config.AGENT_BACKEND_URL + "/buy-credits") else { return }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
