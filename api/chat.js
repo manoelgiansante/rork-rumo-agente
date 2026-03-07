@@ -17,7 +17,7 @@ export default async function handler(req, res) {
     const { messages, conversationId } = req.body;
 
     const { data: profile } = await supabase
-      .from('profiles').select('credits').eq('id', user.id).single();
+      .from('profiles').select('credits').eq('user_id', user.id).single();
 
     if (!profile || profile.credits <= 0) {
       return res.status(403).json({ error: 'Sem créditos disponíveis' });
@@ -41,7 +41,7 @@ export default async function handler(req, res) {
 
     await supabase.from('profiles')
       .update({ credits: profile.credits - 1 })
-      .eq('id', user.id);
+      .eq('user_id', user.id);
 
     await supabase.from('credit_transactions').insert({
       user_id: user.id, amount: -1, type: 'usage', description: 'Mensagem de chat'
