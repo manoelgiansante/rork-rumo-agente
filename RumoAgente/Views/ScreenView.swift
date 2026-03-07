@@ -29,7 +29,7 @@ struct ScreenView: View {
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
                         } else if isLoading {
-                            ProgressView("Conectando ao computador...")
+                            ProgressView("Conectando ao seu desktop...")
                                 .tint(Theme.accent)
                                 .foregroundStyle(.white)
                         } else {
@@ -52,7 +52,7 @@ struct ScreenView: View {
             .statusBarHidden(isFullScreen)
         }
         .preferredColorScheme(.dark)
-        .onDisappear { disconnect() }
+        .onDisappear { stopRefreshing() }
     }
 
     private var connectionStatusBar: some View {
@@ -101,39 +101,58 @@ struct ScreenView: View {
     }
 
     private func connect() {
+        guard let token = supabase.authTokenValue else {
+            errorMessage = "Faça login primeiro"
+            return
+        }
+
         isLoading = true
         errorMessage = nil
 
         Task {
-            guard let statusURL = URL(string: "\(backendURL)/status") else {
-                await MainActor.run { errorMessage = "URL inválida"; isLoading = false }
-                return
-            }
-
             do {
-                let (data, response) = try await URLSession.shared.data(from: statusURL)
-                guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                // Check user's desktop status
+                guard let statusURL = URL(string: "\(backendURL)/desktop/status") else {
+                    await MainActor.run { errorMessage = "URL inválida"; isLoading = false }
+                    return
+                }
+
+                var statusReq = URLRequest(url: statusURL)
+                statusReq.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+                let (statusData, statusResponse) = try await URLSession.shared.data(for: statusReq)
+                guard let httpResponse = statusResponse as? HTTPURLResponse, httpResponse.statusCode == 200 else {
                     await MainActor.run { errorMessage = "Servidor offline"; isLoading = false }
                     return
                 }
 
-                let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-                let desktopRunning = json?["desktop"] as? Bool ?? false
+                let statusJson = try JSONSerialization.jsonObject(with: statusData) as? [String: Any]
+                let desktopRunning = statusJson?["desktop"] as? Bool ?? false
 
                 if !desktopRunning {
+                    // Start user's isolated desktop
                     var startReq = URLRequest(url: URL(string: "\(backendURL)/start-desktop")!)
                     startReq.httpMethod = "POST"
                     startReq.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                    let _ = try await URLSession.shared.data(for: startReq)
-                    try await Task.sleep(for: .seconds(3))
+                    startReq.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+                    let (startData, startResponse) = try await URLSession.shared.data(for: startReq)
+                    guard let startHttp = startResponse as? HTTPURLResponse, startHttp.statusCode == 200 else {
+                        let errorBody = String(data: startData, encoding: .utf8) ?? "Erro"
+                        await MainActor.run { errorMessage = errorBody; isLoading = false }
+                        return
+                    }
+
+                    // Wait for desktop to boot
+                    try await Task.sleep(for: .seconds(4))
                 }
 
-                await fetchScreenshot()
+                await fetchScreenshot(token: token)
 
                 await MainActor.run {
                     isConnected = true
                     isLoading = false
-                    startRefreshing()
+                    startRefreshing(token: token)
                 }
             } catch {
                 await MainActor.run {
@@ -145,23 +164,41 @@ struct ScreenView: View {
     }
 
     private func disconnect() {
-        refreshTimer?.invalidate()
-        refreshTimer = nil
+        stopRefreshing()
+
+        // Stop user's desktop container
+        if let token = supabase.authTokenValue {
+            Task {
+                var req = URLRequest(url: URL(string: "\(backendURL)/stop-desktop")!)
+                req.httpMethod = "POST"
+                req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+                _ = try? await URLSession.shared.data(for: req)
+            }
+        }
+
         isConnected = false
         screenImage = nil
     }
 
-    private func startRefreshing() {
+    private func stopRefreshing() {
+        refreshTimer?.invalidate()
+        refreshTimer = nil
+    }
+
+    private func startRefreshing(token: String) {
         refreshTimer?.invalidate()
         refreshTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { _ in
-            Task { await fetchScreenshot() }
+            Task { await fetchScreenshot(token: token) }
         }
     }
 
-    private func fetchScreenshot() async {
+    private func fetchScreenshot(token: String) async {
         guard let url = URL(string: "\(backendURL)/screenshot") else { return }
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
         do {
-            let (data, response) = try await URLSession.shared.data(from: url)
+            let (data, response) = try await URLSession.shared.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse,
                   httpResponse.statusCode == 200,
                   let image = UIImage(data: data) else { return }
@@ -199,11 +236,11 @@ struct ScreenPlaceholderView: View {
             }
 
             VStack(spacing: 8) {
-                Text("Computador na Nuvem")
+                Text("Seu Computador na Nuvem")
                     .font(.title3.bold())
                     .foregroundStyle(.white)
 
-                Text("Conecte-se ao seu desktop remoto\npara controlar aplicativos.")
+                Text("Desktop privado e isolado.\nSeus dados ficam seguros e separados.")
                     .font(.subheadline)
                     .foregroundStyle(Theme.subtleText)
                     .multilineTextAlignment(.center)

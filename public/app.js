@@ -232,27 +232,56 @@ function switchTab(name) {
 }
 
 // ============ SCREEN ============
+let noVncUrl = null;
+
 async function connectScreen() {
   const btn = document.getElementById('connect-btn');
   btn.textContent = 'Conectando...';
   btn.disabled = true;
 
   try {
-    const res = await fetch(AGENT_URL + '/status');
-    const data = await res.json();
+    // Check desktop status first
+    const statusRes = await fetch(AGENT_URL + '/desktop/status', {
+      headers: { 'Authorization': 'Bearer ' + authToken }
+    });
+    const statusData = await statusRes.json();
 
-    if (!data.desktop) {
-      await fetch(AGENT_URL + '/start-desktop', { method: 'POST' });
-      await new Promise(r => setTimeout(r, 3000));
+    if (!statusData.desktop) {
+      // Start user's isolated desktop container
+      const startRes = await fetch(AGENT_URL + '/start-desktop', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + authToken }
+      });
+      const startData = await startRes.json();
+      if (!startRes.ok) throw new Error(startData.error || 'Erro ao iniciar desktop');
+      noVncUrl = startData.noVncUrl;
+      // Wait for desktop to fully boot
+      await new Promise(r => setTimeout(r, 4000));
     }
 
     document.getElementById('screen-placeholder').style.display = 'none';
-    document.getElementById('screen-image').style.display = 'block';
     document.getElementById('connection-status').innerHTML = '<span class="status-dot green"></span> Conectado';
     document.getElementById('disconnect-btn').style.display = 'block';
 
-    fetchScreenshot();
-    screenInterval = setInterval(fetchScreenshot, 1500);
+    if (noVncUrl) {
+      // Show interactive noVNC iframe
+      const container = document.getElementById('screen-container');
+      let iframe = document.getElementById('screen-iframe');
+      if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = 'screen-iframe';
+        iframe.style.cssText = 'width:100%;height:100%;border:none;border-radius:12px;background:#000;';
+        container.appendChild(iframe);
+      }
+      iframe.src = noVncUrl;
+      iframe.style.display = 'block';
+      document.getElementById('screen-image').style.display = 'none';
+    } else {
+      // Fallback to screenshots
+      document.getElementById('screen-image').style.display = 'block';
+      fetchScreenshot();
+      screenInterval = setInterval(fetchScreenshot, 1500);
+    }
   } catch (e) {
     btn.textContent = '▶ Conectar';
     btn.disabled = false;
@@ -260,8 +289,19 @@ async function connectScreen() {
   }
 }
 
-function disconnectScreen() {
+async function disconnectScreen() {
   if (screenInterval) { clearInterval(screenInterval); screenInterval = null; }
+
+  // Stop user's desktop container
+  try {
+    await fetch(AGENT_URL + '/stop-desktop', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + authToken }
+    });
+  } catch (e) {}
+
+  const iframe = document.getElementById('screen-iframe');
+  if (iframe) { iframe.src = ''; iframe.style.display = 'none'; }
   document.getElementById('screen-placeholder').style.display = '';
   document.getElementById('screen-image').style.display = 'none';
   document.getElementById('connection-status').innerHTML = '<span class="status-dot red"></span> Desconectado';
@@ -269,11 +309,15 @@ function disconnectScreen() {
   const btn = document.getElementById('connect-btn');
   btn.textContent = '▶ Conectar';
   btn.disabled = false;
+  noVncUrl = null;
 }
 
 async function fetchScreenshot() {
   try {
-    const res = await fetch(AGENT_URL + '/screenshot', { cache: 'no-store' });
+    const res = await fetch(AGENT_URL + '/screenshot', {
+      cache: 'no-store',
+      headers: { 'Authorization': 'Bearer ' + authToken }
+    });
     if (!res.ok) return;
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
@@ -297,6 +341,17 @@ async function checkAgentStatus() {
       badge.innerHTML = '<span class="status-dot green"></span> Pronto';
     } else {
       badge.innerHTML = '<span class="status-dot orange"></span> Iniciando';
+    }
+
+    // Also check user's desktop status
+    if (authToken) {
+      const dRes = await fetch(AGENT_URL + '/desktop/status', {
+        headers: { 'Authorization': 'Bearer ' + authToken }
+      });
+      const dData = await dRes.json();
+      if (dData.desktop) {
+        badge.innerHTML = '<span class="status-dot green"></span> Desktop ativo';
+      }
     }
   } catch (e) {
     const badge = document.getElementById('agent-status-badge');

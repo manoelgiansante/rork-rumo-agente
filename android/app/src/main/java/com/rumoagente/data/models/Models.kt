@@ -98,7 +98,15 @@ data class AgentStatusResponse(
     val status: String,
     val desktop: String? = null,
     val uptime: Long? = null,
-    val timestamp: String? = null
+    val timestamp: String? = null,
+    val activeDesktops: Int? = null
+)
+
+data class DesktopStatusResponse(
+    val desktop: Boolean = false,
+    val status: String? = null,
+    val noVncPort: Int? = null,
+    val lastActivity: Long? = null
 )
 
 // ── Subscription Plans ──────────────────────────────────────────────────────

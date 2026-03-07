@@ -94,11 +94,15 @@ fun ScreenViewScreen() {
                             errorText = null
                             coroutineScope.launch {
                                 try {
-                                    val statusResponse = RetrofitInstance.agentApi.getStatus()
+                                    val token = RetrofitInstance.authToken ?: ""
+                                    // Check user's desktop status
+                                    val statusResponse = RetrofitInstance.agentApi.getDesktopStatus("Bearer $token")
                                     if (statusResponse.isSuccessful) {
                                         val status = statusResponse.body()
-                                        if (status?.desktop != "running") {
-                                            RetrofitInstance.agentApi.startDesktop()
+                                        if (status?.desktop != true) {
+                                            // Start user's isolated desktop
+                                            RetrofitInstance.agentApi.startDesktop("Bearer $token")
+                                            delay(4000) // Wait for boot
                                         }
                                         isConnected = true
                                     } else {
@@ -171,6 +175,7 @@ fun ScreenViewScreen() {
                         AsyncImage(
                             model = ImageRequest.Builder(LocalContext.current)
                                 .data("${Config.AGENT_URL}/screenshot?t=$screenshotKey")
+                                .addHeader("Authorization", "Bearer ${RetrofitInstance.authToken ?: ""}")
                                 .crossfade(true)
                                 .build(),
                             contentDescription = "Tela do agente",
