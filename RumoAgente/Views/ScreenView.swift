@@ -9,7 +9,7 @@ struct ScreenView: View {
     @State private var refreshTimer: Timer?
     @State private var errorMessage: String?
 
-    private let backendURL = Config.AGENT_BACKEND_URL
+    private let backendURL = Config.EXPO_PUBLIC_AGENT_BACKEND_URL
 
     var body: some View {
         NavigationStack {
