@@ -2,15 +2,17 @@ import SwiftUI
 
 struct DashboardView: View {
     let supabase: SupabaseService
+    let agentService: AgentService
     @Binding var selectedTab: Int
     @State private var viewModel: DashboardViewModel
     @State private var animateCards = false
     @State private var selectedTask: AgentTask?
 
-    init(supabase: SupabaseService, selectedTab: Binding<Int>) {
+    init(supabase: SupabaseService, agentService: AgentService, selectedTab: Binding<Int>) {
         self.supabase = supabase
+        self.agentService = agentService
         _selectedTab = selectedTab
-        _viewModel = State(initialValue: DashboardViewModel(supabase: supabase))
+        _viewModel = State(initialValue: DashboardViewModel(supabase: supabase, agentService: agentService))
     }
 
     var body: some View {

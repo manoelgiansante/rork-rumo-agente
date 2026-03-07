@@ -3,7 +3,10 @@ import SwiftUI
 struct SubscriptionView: View {
     let supabase: SupabaseService
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     @State private var selectedPlan: SubscriptionPlan = .pro
+    @State private var isProcessing = false
+    @State private var checkoutError: String?
 
     var body: some View {
         NavigationStack {
@@ -79,17 +82,34 @@ struct SubscriptionView: View {
                 }
             }
 
-            if selectedPlan != supabase.currentUser?.plan {
+            if selectedPlan != supabase.currentUser?.plan && selectedPlan != .free {
                 Button {
+                    Task { await subscribe(plan: selectedPlan) }
                 } label: {
-                    Text("Assinar \(selectedPlan.displayName)")
-                        .font(.headline)
-                        .foregroundStyle(.black)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 54)
-                        .background(Theme.accent, in: .rect(cornerRadius: 16))
+                    if isProcessing {
+                        ProgressView()
+                            .tint(.black)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 54)
+                            .background(Theme.accent, in: .rect(cornerRadius: 16))
+                    } else {
+                        Text("Assinar \(selectedPlan.displayName)")
+                            .font(.headline)
+                            .foregroundStyle(.black)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 54)
+                            .background(Theme.accent, in: .rect(cornerRadius: 16))
+                    }
                 }
+                .disabled(isProcessing)
                 .sensoryFeedback(.impact(weight: .medium), trigger: selectedPlan)
+
+                if let checkoutError {
+                    Text(checkoutError)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .multilineTextAlignment(.center)
+                }
             }
         }
     }
@@ -101,9 +121,15 @@ struct SubscriptionView: View {
                 .foregroundStyle(.white)
 
             HStack(spacing: 12) {
-                CreditPackCard(amount: 50, price: "R$ 19,90")
-                CreditPackCard(amount: 200, price: "R$ 59,90")
-                CreditPackCard(amount: 500, price: "R$ 119,90")
+                CreditPackCard(amount: 50, price: "R$ 19,90") {
+                    Task { await buyCredits(amount: 50) }
+                }
+                CreditPackCard(amount: 200, price: "R$ 59,90") {
+                    Task { await buyCredits(amount: 200) }
+                }
+                CreditPackCard(amount: 500, price: "R$ 119,90") {
+                    Task { await buyCredits(amount: 500) }
+                }
             }
         }
     }
@@ -135,6 +161,74 @@ struct SubscriptionView: View {
             Spacer()
         }
         .padding(.vertical, 6)
+    }
+
+    private func subscribe(plan: SubscriptionPlan) async {
+        guard let user = supabase.currentUser else { return }
+        isProcessing = true
+        checkoutError = nil
+
+        let backendURL = Config.AGENT_BACKEND_URL
+        guard let url = URL(string: "\(backendURL)/create-checkout") else {
+            checkoutError = "URL do servidor inválida."
+            isProcessing = false
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: String] = [
+            "userId": user.id,
+            "plan": plan.rawValue,
+            "email": user.email
+        ]
+        request.httpBody = try? JSONEncoder().encode(body)
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                checkoutError = "Erro ao criar sessão de pagamento."
+                isProcessing = false
+                return
+            }
+            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            if let checkoutURLString = json?["url"] as? String, let checkoutURL = URL(string: checkoutURLString) {
+                openURL(checkoutURL)
+            } else {
+                checkoutError = "Resposta inválida do servidor."
+            }
+        } catch {
+            checkoutError = "Erro de conexão: \(error.localizedDescription)"
+        }
+        isProcessing = false
+    }
+
+    private func buyCredits(amount: Int) async {
+        guard let user = supabase.currentUser else { return }
+        let backendURL = Config.AGENT_BACKEND_URL
+        guard let url = URL(string: "\(backendURL)/buy-credits") else { return }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: Any] = [
+            "userId": user.id,
+            "amount": amount,
+            "email": user.email
+        ]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else { return }
+            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            if let checkoutURLString = json?["url"] as? String, let checkoutURL = URL(string: checkoutURLString) {
+                openURL(checkoutURL)
+            }
+        } catch {}
     }
 }
 
@@ -207,9 +301,10 @@ struct PlanCard: View {
 struct CreditPackCard: View {
     let amount: Int
     let price: String
+    let onBuy: () -> Void
 
     var body: some View {
-        Button {} label: {
+        Button(action: onBuy) {
             VStack(spacing: 8) {
                 Text("+\(amount)")
                     .font(.title3.bold())

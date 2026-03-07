@@ -4,6 +4,7 @@ import SwiftUI
 struct RumoAgenteApp: App {
     @State private var supabase = SupabaseService()
     @State private var claudeService = ClaudeService()
+    @State private var agentService = AgentService()
     @AppStorage("hasOnboarded") private var hasOnboarded = false
 
     var body: some Scene {
@@ -14,12 +15,15 @@ struct RumoAgenteApp: App {
                 } else if !supabase.isAuthenticated {
                     AuthView(supabase: supabase)
                 } else {
-                    ContentView(supabase: supabase, claudeService: claudeService)
+                    ContentView(supabase: supabase, claudeService: claudeService, agentService: agentService)
                 }
             }
             .animation(.snappy, value: hasOnboarded)
             .animation(.snappy, value: supabase.isAuthenticated)
-            .task { await supabase.checkSession() }
+            .task {
+                await supabase.checkSession()
+                agentService.configure(baseURL: Config.AGENT_BACKEND_URL)
+            }
             .onOpenURL { url in
                 Task {
                     try? await supabase.handleOAuthCallback(url: url)

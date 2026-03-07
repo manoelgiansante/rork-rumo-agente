@@ -3,13 +3,14 @@ import SwiftUI
 struct ContentView: View {
     let supabase: SupabaseService
     let claudeService: ClaudeService
+    let agentService: AgentService
     @State private var appsViewModel = AppsViewModel()
     @State private var selectedTab = 0
 
     var body: some View {
         TabView(selection: $selectedTab) {
             Tab("Dashboard", systemImage: "square.grid.2x2.fill", value: 0) {
-                DashboardView(supabase: supabase, selectedTab: $selectedTab)
+                DashboardView(supabase: supabase, agentService: agentService, selectedTab: $selectedTab)
             }
             Tab("Tela", systemImage: "desktopcomputer", value: 1) {
                 ScreenView(supabase: supabase)
@@ -26,5 +27,6 @@ struct ContentView: View {
         }
         .tint(Theme.accent)
         .preferredColorScheme(.dark)
+        .onAppear { appsViewModel.supabase = supabase }
     }
 }

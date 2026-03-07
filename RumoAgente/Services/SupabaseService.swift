@@ -111,6 +111,7 @@ class SupabaseService {
                 createdAt: Date()
             )
             isAuthenticated = true
+            await fetchProfile()
         } catch {
             signOut()
         }
@@ -231,6 +232,70 @@ class SupabaseService {
         let (_, response) = try await URLSession.shared.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw ServiceError.networkError
+        }
+    }
+
+    func fetchProfile() async {
+        guard let token = authToken, let userId = currentUser?.id else { return }
+        let urlString = "\(baseURL)/rest/v1/profiles?id=eq.\(userId)&select=*&limit=1"
+        guard let url = URL(string: urlString) else { return }
+
+        var request = URLRequest(url: url)
+        request.setValue(anonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else { return }
+
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            let profiles = try decoder.decode([UserProfile].self, from: data)
+            if let profile = profiles.first {
+                currentUser = profile
+            }
+        } catch {}
+    }
+
+    func fetchTasks() async -> [AgentTask] {
+        guard let token = authToken, let userId = currentUser?.id else { return [] }
+        let urlString = "\(baseURL)/rest/v1/agent_tasks?user_id=eq.\(userId)&select=*&order=created_at.desc&limit=20"
+        guard let url = URL(string: urlString) else { return [] }
+
+        var request = URLRequest(url: url)
+        request.setValue(anonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else { return [] }
+
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            return try decoder.decode([AgentTask].self, from: data)
+        } catch {
+            return []
+        }
+    }
+
+    func fetchApps() async -> [CloudApp] {
+        guard let token = authToken else { return [] }
+        let urlString = "\(baseURL)/rest/v1/cloud_apps?select=*&order=name.asc"
+        guard let url = URL(string: urlString) else { return [] }
+
+        var request = URLRequest(url: url)
+        request.setValue(anonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else { return [] }
+
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            return try decoder.decode([CloudApp].self, from: data)
+        } catch {
+            return []
         }
     }
 }

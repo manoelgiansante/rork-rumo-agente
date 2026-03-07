@@ -9,20 +9,22 @@ class DashboardViewModel {
 
     let supabase: SupabaseService
 
-    init(supabase: SupabaseService) {
+    let agentService: AgentService
+
+    init(supabase: SupabaseService, agentService: AgentService) {
         self.supabase = supabase
+        self.agentService = agentService
     }
 
     func loadDashboard() async {
         isLoading = true
 
-        agentOnline = true
+        async let statusCheck = agentService.checkStatus()
+        async let tasksLoad = supabase.fetchTasks()
+        await supabase.fetchProfile()
 
-        recentTasks = [
-            AgentTask(id: "1", userId: "", title: "Abrir Ponta do S e lançar notas", status: .completed, appName: "Ponta do S", creditsUsed: 3, createdAt: Date().addingTimeInterval(-3600), completedAt: Date().addingTimeInterval(-3500)),
-            AgentTask(id: "2", userId: "", title: "Baixar relatório mensal", status: .completed, appName: "Rumo Máquinas", creditsUsed: 2, createdAt: Date().addingTimeInterval(-7200), completedAt: Date().addingTimeInterval(-7100)),
-            AgentTask(id: "3", userId: "", title: "Atualizar planilha de custos", status: .running, appName: "Excel Online", creditsUsed: 1, createdAt: Date().addingTimeInterval(-300)),
-        ]
+        agentOnline = await statusCheck
+        recentTasks = await tasksLoad
 
         isLoading = false
     }
