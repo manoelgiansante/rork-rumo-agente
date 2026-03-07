@@ -2,6 +2,14 @@
   "functions": {
     "api/**/*.js": {
       "maxDuration": 30
+    },
+    "api/**/*.ts": {
+      "maxDuration": 30
     }
-  }
+  },
+  "rewrites": [
+    { "source": "/app.js", "destination": "/public/app.js" },
+    { "source": "/styles.css", "destination": "/public/styles.css" },
+    { "source": "/", "destination": "/public/index.html" }
+  ]
 }

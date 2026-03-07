@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Rumo Agente</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>🤖</text></svg>">
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen" class="screen active">
+  <div class="auth-container">
+    <div class="auth-logo">
+      <div class="logo-glow"></div>
+      <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="url(#grad)" stroke-width="1.5">
+        <defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#34D399"/><stop offset="100%" style="stop-color:#3B82F6"/></linearGradient></defs>
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+      </svg>
+    </div>
+    <h1 class="auth-title">Rumo Agente</h1>
+    <p class="auth-subtitle" id="auth-subtitle">Entre na sua conta</p>
+
+    <div id="signup-name-field" class="input-group" style="display:none">
+      <span class="input-icon">👤</span>
+      <input type="text" id="auth-name" placeholder="Nome completo" autocomplete="name">
+    </div>
+    <div class="input-group">
+      <span class="input-icon">✉️</span>
+      <input type="email" id="auth-email" placeholder="Email" autocomplete="email">
+    </div>
+    <div class="input-group">
+      <span class="input-icon">🔒</span>
+      <input type="password" id="auth-password" placeholder="Senha" autocomplete="current-password">
+      <button class="toggle-pass" onclick="togglePassword()">👁️</button>
+    </div>
+
+    <p id="auth-error" class="error-text" style="display:none"></p>
+
+    <button class="btn-primary" id="auth-submit-btn" onclick="handleAuth()">Entrar</button>
+    <button class="btn-link" id="forgot-btn" onclick="forgotPassword()">Esqueci minha senha</button>
+
+    <div class="divider"><span>ou</span></div>
+
+    <button class="btn-social btn-apple" onclick="signInWithApple()">
+      <span>&#xF8FF;</span> Continuar com Apple
+    </button>
+    <button class="btn-social btn-google" onclick="signInWithGoogle()">
+      <span>G</span> Continuar com Google
+    </button>
+
+    <p class="auth-toggle">
+      <span id="toggle-text">Nao tem conta?</span>
+      <a href="#" id="toggle-link" onclick="toggleAuthMode(event)">Criar conta</a>
+    </p>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app-screen" class="screen">
+  <!-- TAB CONTENT -->
+  <div id="tab-content">
+    <!-- DASHBOARD -->
+    <div id="tab-dashboard" class="tab-panel active">
+      <div class="tab-header"><h2>Dashboard</h2></div>
+      <div class="tab-body">
+        <div class="header-section">
+          <div>
+            <h3 id="greeting">Ola, Produtor!</h3>
+            <p class="subtle" id="current-date"></p>
+          </div>
+          <div class="avatar" id="avatar-initial">U</div>
+        </div>
+
+        <div class="card agent-status-card">
+          <div class="agent-icon">🧠</div>
+          <div>
+            <div class="agent-header">
+              <span class="card-title">Agente</span>
+              <span class="status-badge" id="agent-status-badge">
+                <span class="status-dot green"></span> Pronto
+              </span>
+            </div>
+            <p class="subtle small">Envie comandos pelo chat e o agente executa para voce</p>
+          </div>
+        </div>
+
+        <div class="card credits-card">
+          <div>
+            <p class="subtle">Creditos</p>
+            <div class="credits-value"><span id="credits-count">10</span> <small class="subtle">restantes</small></div>
+          </div>
+          <div class="text-right">
+            <p class="subtle">Usados hoje</p>
+            <span class="credits-used" id="credits-used">0</span>
+          </div>
+        </div>
+
+        <div class="quick-actions">
+          <button class="quick-btn" onclick="switchTab('screen')"><span>🖥️</span>Ver Tela</button>
+          <button class="quick-btn" onclick="switchTab('chat')"><span>💬</span>Chat</button>
+          <button class="quick-btn" onclick="switchTab('apps')"><span>📱</span>Apps</button>
+          <button class="quick-btn" onclick="switchTab('profile')"><span>👑</span>Planos</button>
+        </div>
+
+        <h4 class="section-title">Tarefas Recentes</h4>
+        <div id="tasks-list" class="tasks-list">
+          <div class="empty-state">
+            <span>✅</span>
+            <p>Nenhuma tarefa</p>
+            <p class="subtle small">Suas tarefas aparecerão aqui</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN -->
+    <div id="tab-screen" class="tab-panel">
+      <div class="tab-header">
+        <h2>Tela</h2>
+        <div class="screen-controls">
+          <span class="connection-status" id="connection-status">
+            <span class="status-dot red"></span> Desconectado
+          </span>
+          <button class="btn-icon" id="disconnect-btn" style="display:none" onclick="disconnectScreen()">Desconectar</button>
+          <button class="btn-icon" onclick="toggleFullscreen()">⛶</button>
+        </div>
+      </div>
+      <div class="screen-container" id="screen-container">
+        <div id="screen-placeholder" class="screen-placeholder">
+          <div class="pulse-circle"></div>
+          <div class="pulse-circle inner"></div>
+          <span class="screen-icon">🖥️</span>
+          <h3>Computador na Nuvem</h3>
+          <p class="subtle">Conecte-se ao seu desktop remoto para controlar aplicativos.</p>
+          <button class="btn-primary" id="connect-btn" onclick="connectScreen()">▶ Conectar</button>
+        </div>
+        <img id="screen-image" class="screen-image" style="display:none" alt="Desktop Remoto">
+      </div>
+    </div>
+
+    <!-- CHAT -->
+    <div id="tab-chat" class="tab-panel">
+      <div class="tab-header"><h2>Agente IA</h2></div>
+      <div class="app-selector" id="app-selector"></div>
+      <div class="chat-messages" id="chat-messages">
+        <div class="message assistant">
+          <div class="bubble">Ola! Sou o Rumo Agente. Como posso ajudar voce hoje?</div>
+          <span class="msg-time">Agora</span>
+        </div>
+      </div>
+      <div class="chat-input-bar">
+        <input type="text" id="chat-input" placeholder="Digite um comando..." onkeydown="if(event.key==='Enter')sendChat()">
+        <button class="send-btn" id="send-btn" onclick="sendChat()">⬆</button>
+      </div>
+    </div>
+
+    <!-- APPS -->
+    <div id="tab-apps" class="tab-panel">
+      <div class="tab-header"><h2>Apps</h2></div>
+      <div class="tab-body">
+        <div class="category-filter" id="category-filter"></div>
+        <div class="apps-grid" id="apps-grid"></div>
+      </div>
+    </div>
+
+    <!-- PROFILE -->
+    <div id="tab-profile" class="tab-panel">
+      <div class="tab-header"><h2>Perfil</h2></div>
+      <div class="tab-body">
+        <div class="profile-header">
+          <div class="profile-avatar" id="profile-avatar">U</div>
+          <h3 id="profile-name">Usuario</h3>
+          <p class="subtle" id="profile-email">email@exemplo.com</p>
+        </div>
+
+        <div class="card plan-card" onclick="showSubscription()">
+          <div class="plan-icon">👑</div>
+          <div>
+            <p class="card-title" id="plan-name">Plano Gratuito</p>
+            <p class="subtle small" id="plan-credits">10 creditos restantes</p>
+          </div>
+          <span class="chevron">›</span>
+        </div>
+
+        <h4 class="section-title">Configuracoes</h4>
+        <div class="settings-row"><span>🌐</span>Idioma<span class="subtle">Portugues</span><span class="chevron">›</span></div>
+        <div class="settings-row"><span>🔔</span>Notificacoes<span class="subtle">Ativadas</span><span class="chevron">›</span></div>
+        <div class="settings-row"><span>🎨</span>Aparencia<span class="subtle">Automatico</span><span class="chevron">›</span></div>
+        <div class="settings-row"><span>🔒</span>Privacidade<span class="chevron">›</span></div>
+
+        <h4 class="section-title">Suporte</h4>
+        <div class="settings-row"><span>❓</span>Central de Ajuda<span class="chevron">›</span></div>
+        <div class="settings-row"><span>✉️</span>Contato<span class="chevron">›</span></div>
+        <div class="settings-row"><span>📄</span>Termos de Uso<span class="chevron">›</span></div>
+
+        <button class="btn-logout" onclick="logout()">🚪 Sair da Conta</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB BAR -->
+  <nav class="tab-bar">
+    <button class="tab-item active" data-tab="dashboard" onclick="switchTab('dashboard')">
+      <span>📊</span><label>Dashboard</label>
+    </button>
+    <button class="tab-item" data-tab="screen" onclick="switchTab('screen')">
+      <span>🖥️</span><label>Tela</label>
+    </button>
+    <button class="tab-item" data-tab="chat" onclick="switchTab('chat')">
+      <span>💬</span><label>Chat</label>
+    </button>
+    <button class="tab-item" data-tab="apps" onclick="switchTab('apps')">
+      <span>📱</span><label>Apps</label>
+    </button>
+    <button class="tab-item" data-tab="profile" onclick="switchTab('profile')">
+      <span>👤</span><label>Perfil</label>
+    </button>
+  </nav>
+</div>
+
+<!-- SUBSCRIPTION MODAL -->
+<div id="subscription-modal" class="modal" style="display:none">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Planos e Creditos</h2>
+      <button onclick="closeSubscription()">✕</button>
+    </div>
+    <div class="modal-body">
+      <h4 class="section-title">Escolha seu Plano</h4>
+      <div class="plan-option" data-plan="free" onclick="selectPlan('free')">
+        <div><strong>Gratuito</strong><br><small class="subtle">10 creditos/mes</small></div>
+        <div class="plan-price accent">Gratis</div>
+      </div>
+      <div class="plan-option" data-plan="starter" onclick="selectPlan('starter')">
+        <div><strong>Starter</strong><br><small class="subtle">100 creditos/mes</small></div>
+        <div class="plan-price">R$ 49,90<small>/mes</small></div>
+      </div>
+      <div class="plan-option selected" data-plan="pro" onclick="selectPlan('pro')">
+        <div><strong>Pro</strong> <span class="badge-popular">POPULAR</span><br><small class="subtle">500 creditos/mes</small></div>
+        <div class="plan-price">R$ 149,90<small>/mes</small></div>
+      </div>
+      <div class="plan-option" data-plan="enterprise" onclick="selectPlan('enterprise')">
+        <div><strong>Enterprise</strong><br><small class="subtle">2000 creditos/mes</small></div>
+        <div class="plan-price">R$ 499,90<small>/mes</small></div>
+      </div>
+      <button class="btn-primary" id="subscribe-btn" onclick="subscribe()">Assinar Pro</button>
+
+      <h4 class="section-title">Creditos Extras</h4>
+      <div class="credits-packs">
+        <div class="credit-pack" onclick="buyCredits(50)"><strong>+50</strong><small>creditos</small><span class="accent">R$ 19,90</span></div>
+        <div class="credit-pack" onclick="buyCredits(200)"><strong>+200</strong><small>creditos</small><span class="accent">R$ 59,90</span></div>
+        <div class="credit-pack" onclick="buyCredits(500)"><strong>+500</strong><small>creditos</small><span class="accent">R$ 119,90</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
