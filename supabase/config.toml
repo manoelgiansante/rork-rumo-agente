@@ -1,0 +1,18 @@
+[auth]
+site_url = "app.rork.rumoagente://login-callback"
+additional_redirect_urls = ["app.rork.rumoagente://login-callback"]
+
+[auth.external.apple]
+enabled = true
+client_id = "app.rork.t1b5w93224kluhcht04jl"
+secret = """-----BEGIN PRIVATE KEY-----
+MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgL9yCupZe4JiKqNFR
+LnmFDgH86cizTKdid9PAKGjNK5SgCgYIKoZIzj0DAQehRANCAASzIOF1ZnHeI1ly
+NQ8JSqpqeI5Z3PHmfUQm/A9YvuYcmX7N1OTJ/B5jqDGKfccR+1Fjmsc31VygLNQV
+4hsmh+OM
+-----END PRIVATE KEY-----"""
+
+[auth.external.google]
+enabled = true
+client_id = "659275180000-ml49nmjebmc6m4a1e75a5e7merpcsghv.apps.googleusercontent.com"
+secret = ""
