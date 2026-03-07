@@ -8,6 +8,7 @@ const Stripe = require('stripe');
 const { createClient } = require('@supabase/supabase-js');
 const Anthropic = require('@anthropic-ai/sdk');
 const containerManager = require('./container-manager');
+const desktopAgent = require('./desktop-agent');
 
 const app = express();
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
@@ -167,7 +168,7 @@ app.get('/screenshot', authenticateUser, async (req, res) => {
 });
 
 // ============================================
-// Chat com Claude (proxy seguro)
+// Chat com Claude + Tool Use (agente inteligente)
 // ============================================
 app.post('/chat', authenticateUser, async (req, res) => {
   try {
@@ -181,15 +182,83 @@ app.post('/chat', authenticateUser, async (req, res) => {
       return res.status(403).json({ error: 'Sem creditos disponiveis' });
     }
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2048,
-      system: 'Voce e o Rumo Agente, um assistente inteligente para gestao agropecuaria. Responda em portugues do Brasil de forma clara e objetiva.',
-      messages: messages.map(m => ({ role: m.role, content: m.content }))
-    });
+    // Check if user has an active desktop
+    const desktopInfo = containerManager.getDesktopInfo(userId);
+    const hasDesktop = desktopInfo.desktop;
 
-    const assistantMessage = response.content[0].text;
+    // Build system prompt with desktop context
+    let systemPrompt = desktopAgent.SYSTEM_PROMPT;
+    if (!hasDesktop) {
+      systemPrompt += '\n\nATENCAO: O desktop do usuario NAO esta ativo. Se ele pedir para executar acoes no computador, diga para ele conectar primeiro na aba "Tela".';
+    }
 
+    // Agentic loop: send to Claude, execute tools, repeat until text response
+    let claudeMessages = messages.map(m => ({ role: m.role, content: m.content }));
+    let finalText = '';
+    let actionsExecuted = [];
+    let iterations = 0;
+    const MAX_ITERATIONS = 10;
+
+    while (iterations < MAX_ITERATIONS) {
+      iterations++;
+
+      const requestParams = {
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2048,
+        system: systemPrompt,
+        messages: claudeMessages
+      };
+
+      // Only provide tools if desktop is active
+      if (hasDesktop) {
+        requestParams.tools = desktopAgent.DESKTOP_TOOLS;
+      }
+
+      const response = await anthropic.messages.create(requestParams);
+
+      // Process response content blocks
+      let hasToolUse = false;
+      let toolResults = [];
+
+      for (const block of response.content) {
+        if (block.type === 'text') {
+          finalText += block.text;
+        } else if (block.type === 'tool_use') {
+          hasToolUse = true;
+          console.log(`[Agent] Tool: ${block.name}(${JSON.stringify(block.input)}) for user ${userId.substring(0, 8)}`);
+
+          const result = await desktopAgent.executeTool(userId, block.name, block.input);
+          actionsExecuted.push({ tool: block.name, input: block.input, result });
+
+          toolResults.push({
+            type: 'tool_result',
+            tool_use_id: block.id,
+            content: result
+          });
+        }
+      }
+
+      // If no tool use, we're done
+      if (!hasToolUse || response.stop_reason === 'end_turn') {
+        break;
+      }
+
+      // Add assistant response and tool results for next iteration
+      claudeMessages.push({ role: 'assistant', content: response.content });
+      claudeMessages.push({ role: 'user', content: toolResults });
+    }
+
+    // Take final screenshot if actions were executed
+    let screenshotTaken = false;
+    if (actionsExecuted.length > 0 && hasDesktop) {
+      await containerManager.takeScreenshot(userId);
+      screenshotTaken = true;
+    }
+
+    // Build response message
+    const assistantMessage = finalText || 'Acoes executadas com sucesso. Veja o resultado na aba Tela.';
+
+    // Save to database
     if (conversationId) {
       await supabase.from('chat_messages').insert([
         { conversation_id: conversationId, role: 'user', content: messages[messages.length - 1].content },
@@ -197,16 +266,21 @@ app.post('/chat', authenticateUser, async (req, res) => {
       ]);
     }
 
+    // Debit credit
     await supabase.from('profiles')
       .update({ credits: profile.credits - 1 })
       .eq('user_id', userId);
 
     await supabase.from('credit_transactions').insert({
       user_id: userId, amount: -1, type: 'usage',
-      description: 'Mensagem de chat'
+      description: actionsExecuted.length > 0 ? 'Comando do agente' : 'Mensagem de chat'
     });
 
-    res.json({ message: assistantMessage });
+    res.json({
+      message: assistantMessage,
+      actions: actionsExecuted.length > 0 ? actionsExecuted.map(a => a.tool) : undefined,
+      screenshotAvailable: screenshotTaken
+    });
   } catch (err) {
     console.error('Chat error:', err);
     res.status(500).json({ error: 'Erro ao processar mensagem' });
