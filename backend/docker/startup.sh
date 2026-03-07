@@ -4,18 +4,49 @@ set -e
 # Clean stale VNC locks
 rm -f /tmp/.X1-lock /tmp/.X11-unix/X1
 
-# Start VNC server
-vncserver :1 \
-  -geometry ${VNC_RESOLUTION} \
+# Ensure VNC password exists
+if [ ! -f "$HOME/.vnc/passwd" ]; then
+    mkdir -p "$HOME/.vnc"
+    echo "rumoagente" | tigervncpasswd -f > "$HOME/.vnc/passwd"
+    chmod 600 "$HOME/.vnc/passwd"
+fi
+
+# Create proper xstartup that keeps running
+cat > "$HOME/.vnc/xstartup" << 'XEOF'
+#!/bin/bash
+unset SESSION_MANAGER
+unset DBUS_SESSION_BUS_ADDRESS
+export XDG_SESSION_TYPE=x11
+
+# Start dbus
+eval $(dbus-launch --sh-syntax)
+
+# Start XFCE desktop - exec keeps it in foreground
+exec startxfce4
+XEOF
+chmod +x "$HOME/.vnc/xstartup"
+
+# Start VNC server (foreground mode to avoid early exit detection)
+tigervncserver :1 \
+  -geometry ${VNC_RESOLUTION:-1280x720} \
   -depth 24 \
-  -SecurityTypes VncAuth \
-  -rfbport ${VNC_PORT} \
-  -localhost no
+  -rfbport ${VNC_PORT:-5901} \
+  -localhost no \
+  -fg &
+
+VNC_PID=$!
+sleep 3
+
+echo "VNC server started on port ${VNC_PORT:-5901} (PID: $VNC_PID)"
 
 # Start noVNC (websocket proxy to VNC)
-websockify --web /usr/share/novnc ${NOVNC_PORT} localhost:${VNC_PORT} &
+NOVNC_DIR="/usr/share/novnc"
+if [ -d "$NOVNC_DIR" ]; then
+    websockify --web "$NOVNC_DIR" ${NOVNC_PORT:-6080} localhost:${VNC_PORT:-5901} &
+    echo "noVNC started on port ${NOVNC_PORT:-6080}"
+fi
 
-echo "Desktop ready - VNC on :${VNC_PORT}, noVNC on :${NOVNC_PORT}"
+echo "Desktop ready!"
 
-# Keep container alive
-tail -f /dev/null
+# Wait for VNC process
+wait $VNC_PID
