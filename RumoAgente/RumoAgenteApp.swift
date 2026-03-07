@@ -22,7 +22,7 @@ struct RumoAgenteApp: App {
             .animation(.snappy, value: supabase.isAuthenticated)
             .task {
                 await supabase.checkSession()
-                agentService.configure(baseURL: Config.AGENT_BACKEND_URL)
+                agentService.configure(baseURL: "http://216.238.111.253")
             }
             .onOpenURL { url in
                 Task {

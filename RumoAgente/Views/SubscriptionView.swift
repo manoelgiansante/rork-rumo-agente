@@ -168,8 +168,7 @@ struct SubscriptionView: View {
         isProcessing = true
         checkoutError = nil
 
-        let backendURL = Config.AGENT_BACKEND_URL
-        guard let url = URL(string: "\(backendURL)/create-checkout") else {
+        guard let url = URL(string: "http://216.238.111.253/create-checkout") else {
             checkoutError = "URL do servidor inválida."
             isProcessing = false
             return
@@ -196,8 +195,9 @@ struct SubscriptionView: View {
                 isProcessing = false
                 return
             }
-            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-            if let checkoutURLString = json?["url"] as? String, let checkoutURL = URL(string: checkoutURLString) {
+            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let checkoutURLString = json["url"] as? String,
+               let checkoutURL = URL(string: checkoutURLString) {
                 openURL(checkoutURL)
             } else {
                 checkoutError = "Resposta inválida do servidor."
@@ -210,8 +210,7 @@ struct SubscriptionView: View {
 
     private func buyCredits(amount: Int) async {
         guard let user = supabase.currentUser else { return }
-        let backendURL = Config.AGENT_BACKEND_URL
-        guard let url = URL(string: "\(backendURL)/buy-credits") else { return }
+        guard let url = URL(string: "http://216.238.111.253/buy-credits") else { return }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -221,17 +220,18 @@ struct SubscriptionView: View {
         }
 
         let body: [String: Any] = [
-            "userId": user.id,
-            "amount": amount,
-            "email": user.email
+            "userId": user.id as Any,
+            "amount": amount as Any,
+            "email": user.email as Any
         ]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else { return }
-            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-            if let checkoutURLString = json?["url"] as? String, let checkoutURL = URL(string: checkoutURLString) {
+            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let checkoutURLString = json["url"] as? String,
+               let checkoutURL = URL(string: checkoutURLString) {
                 openURL(checkoutURL)
             }
         } catch {}

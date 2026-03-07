@@ -5,9 +5,7 @@ import Foundation
 class ClaudeService {
     var isProcessing = false
 
-    private var backendURL: String {
-        Config.AGENT_BACKEND_URL
-    }
+    private let backendURL = "http://216.238.111.253"
 
     func sendCommand(message: String, appContext: String?, conversationHistory: [ChatMessage], authToken: String?) async throws -> ChatMessage {
         isProcessing = true
