@@ -1,5 +1,6 @@
 const { execSync } = require('child_process');
 const containerManager = require('./container-manager');
+const agentMemory = require('./agent-memory');
 
 // Tools that Claude can use to control the user's desktop
 const DESKTOP_TOOLS = [
@@ -108,6 +109,84 @@ const DESKTOP_TOOLS = [
       },
       required: ['seconds']
     }
+  },
+  // Novas tools para memoria e credenciais
+  {
+    name: 'save_user_preference',
+    description: 'Salva uma preferencia ou informacao aprendida sobre o usuario. Use quando o usuario mencionar algo que deve ser lembrado (nome da fazenda, sistema preferido, forma de trabalhar, etc).',
+    input_schema: {
+      type: 'object',
+      properties: {
+        key: { type: 'string', description: 'Identificador da preferencia (ex: fazenda_nome, sistema_favorito, unidade_peso)' },
+        value: { type: 'string', description: 'Valor da preferencia' },
+        category: { type: 'string', description: 'Categoria: preference, learned_fact, software_knowledge', default: 'preference' }
+      },
+      required: ['key', 'value']
+    }
+  },
+  {
+    name: 'get_credential',
+    description: 'Recupera as credenciais salvas de um sistema/servico do usuario. Use quando o usuario pedir para acessar um sistema que ele ja cadastrou login.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        service_name: { type: 'string', description: 'Nome do servico (ex: aegro, conta_azul, siagri)' }
+      },
+      required: ['service_name']
+    }
+  },
+  {
+    name: 'save_credential',
+    description: 'Salva credenciais de um sistema/servico do usuario de forma segura (criptografada). Use quando o usuario fornecer login/senha de um sistema para salvar.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        service_name: { type: 'string', description: 'Nome do servico (ex: aegro, conta_azul)' },
+        service_url: { type: 'string', description: 'URL do servico (ex: https://app.aegro.com.br)' },
+        username: { type: 'string', description: 'Login do usuario (email, CPF, etc)' },
+        password: { type: 'string', description: 'Senha do usuario' }
+      },
+      required: ['service_name', 'username', 'password']
+    }
+  },
+  {
+    name: 'list_credentials',
+    description: 'Lista todos os servicos que o usuario tem credenciais salvas (sem mostrar senhas).',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'save_workflow',
+    description: 'Salva uma sequencia de acoes que funcionou como um workflow reutilizavel. Use apos completar com sucesso uma tarefa que o usuario pode querer repetir.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Nome curto do workflow (ex: login_aegro, criar_planilha_gado)' },
+        description: { type: 'string', description: 'Descricao do que o workflow faz' },
+        trigger_phrases: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Frases que ativam esse workflow (ex: ["acessar aegro", "entrar no aegro"])'
+        },
+        target_software: { type: 'string', description: 'Software alvo (ex: aegro, firefox, libreoffice)' }
+      },
+      required: ['name', 'description', 'trigger_phrases']
+    }
+  },
+  {
+    name: 'request_confirmation',
+    description: 'Pede confirmacao ao usuario antes de executar uma acao critica (deletar, pagar, enviar, instalar). SEMPRE use antes de acoes que possam causar dano ou custo.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        action_description: { type: 'string', description: 'Descricao clara da acao que sera executada' },
+        risk_level: { type: 'string', description: 'Nivel de risco: low, medium, high, critical' }
+      },
+      required: ['action_description', 'risk_level']
+    }
   }
 ];
 
@@ -144,29 +223,33 @@ function execInContainer(userId, cmd) {
 }
 
 // Execute a tool call from Claude
-async function executeTool(userId, toolName, toolInput) {
-  const name = containerName(userId);
+async function executeTool(userId, toolName, toolInput, supabase, sessionId) {
 
   switch (toolName) {
     case 'open_app': {
       const appCmd = APP_COMMANDS[toolInput.app_name.toLowerCase()] || toolInput.app_name;
       execInContainer(userId, `${appCmd} &`);
       await sleep(2000);
+      // Track app usage in memory
+      if (supabase) {
+        await agentMemory.trackAppUsage(supabase, userId, toolInput.app_name.toLowerCase());
+      }
       return `App "${toolInput.app_name}" aberto com sucesso.`;
     }
 
     case 'type_text': {
+      // Check if this action needs confirmation
+      const confirmCheck = agentMemory.shouldConfirm(toolName, toolInput);
+      if (confirmCheck && supabase) {
+        return `CONFIRMACAO_NECESSARIA: ${confirmCheck.reason}. O texto contem informacao sensivel. Peca confirmacao ao usuario antes de continuar.`;
+      }
       const text = toolInput.text.replace(/'/g, "\\'");
       execInContainer(userId, `xdotool type --delay 30 '${text}'`);
       return `Texto digitado: "${toolInput.text}"`;
     }
 
     case 'press_key': {
-      // Convert common key names to xdotool format
-      let key = toolInput.key
-        .replace('ctrl+', 'ctrl+')
-        .replace('alt+', 'alt+')
-        .replace('shift+', 'shift+');
+      let key = toolInput.key;
       execInContainer(userId, `xdotool key ${key}`);
       return `Tecla "${toolInput.key}" pressionada.`;
     }
@@ -183,6 +266,11 @@ async function executeTool(userId, toolName, toolInput) {
     }
 
     case 'run_command': {
+      // Check for dangerous commands
+      const confirmCheck = agentMemory.shouldConfirm(toolName, toolInput);
+      if (confirmCheck) {
+        return `BLOQUEADO: ${confirmCheck.reason}. Risco: ${confirmCheck.risk}. Peca confirmacao ao usuario.`;
+      }
       const result = execInContainer(userId, toolInput.command);
       if (result.success) {
         return `Comando executado.\nSaida: ${result.output || '(sem saida)'}`;
@@ -204,6 +292,75 @@ async function executeTool(userId, toolName, toolInput) {
       return `Aguardou ${seconds} segundos.`;
     }
 
+    // ===== NEW TOOLS =====
+
+    case 'save_user_preference': {
+      if (!supabase) return 'Erro: banco de dados nao disponivel.';
+      const category = toolInput.category || 'preference';
+      await agentMemory.saveMemory(supabase, userId, category, toolInput.key, toolInput.value);
+      return `Preferencia salva: ${toolInput.key} = ${toolInput.value}`;
+    }
+
+    case 'get_credential': {
+      if (!supabase) return 'Erro: banco de dados nao disponivel.';
+      const cred = await agentMemory.getCredential(supabase, userId, toolInput.service_name);
+      if (!cred) {
+        return `Nenhuma credencial encontrada para "${toolInput.service_name}". Peca ao usuario o login e senha.`;
+      }
+      return `Credenciais recuperadas para ${cred.service_name}: usuario="${cred.username}", senha recuperada do cofre seguro. URL: ${cred.service_url || 'nao cadastrada'}`;
+    }
+
+    case 'save_credential': {
+      if (!supabase) return 'Erro: banco de dados nao disponivel.';
+      const saved = await agentMemory.saveCredential(
+        supabase, userId,
+        toolInput.service_name,
+        toolInput.service_url,
+        toolInput.username,
+        toolInput.password
+      );
+      if (saved) {
+        return `Credenciais para "${toolInput.service_name}" salvas com seguranca (criptografadas). Na proxima vez, basta pedir para acessar ${toolInput.service_name}.`;
+      }
+      return 'Erro ao salvar credenciais.';
+    }
+
+    case 'list_credentials': {
+      if (!supabase) return 'Erro: banco de dados nao disponivel.';
+      const creds = await agentMemory.listCredentials(supabase, userId);
+      if (creds.length === 0) {
+        return 'Nenhuma credencial salva. O usuario pode fornecer login/senha de sistemas que deseja acessar.';
+      }
+      const list = creds.map(c => `- ${c.service_name}: ${c.username} (${c.service_url || 'sem URL'})`).join('\n');
+      return `Credenciais salvas:\n${list}`;
+    }
+
+    case 'save_workflow': {
+      if (!supabase) return 'Erro: banco de dados nao disponivel.';
+      // Get last actions from the current session to save as steps
+      const wfId = await agentMemory.saveWorkflow(
+        supabase, userId,
+        toolInput.name,
+        toolInput.description,
+        toolInput.trigger_phrases,
+        [], // Steps will be filled from action log
+        toolInput.target_software
+      );
+      return `Workflow "${toolInput.name}" salvo com sucesso. Da proxima vez que o usuario pedir algo similar, vou seguir esse fluxo automaticamente.`;
+    }
+
+    case 'request_confirmation': {
+      if (!supabase) return 'Erro: banco de dados nao disponivel.';
+      const confId = await agentMemory.createConfirmation(
+        supabase, userId,
+        'pending_action',
+        toolInput,
+        toolInput.action_description,
+        toolInput.risk_level
+      );
+      return `AGUARDANDO_CONFIRMACAO: "${toolInput.action_description}" (risco: ${toolInput.risk_level}). Informe ao usuario e peca para confirmar antes de continuar.`;
+    }
+
     default:
       return `Ferramenta desconhecida: ${toolName}`;
   }
@@ -213,7 +370,29 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-const SYSTEM_PROMPT = `Voce e o Rumo Agente, um assistente inteligente que controla um computador na nuvem para o usuario.
+// Build system prompt with user's memory and workflow context
+async function buildSystemPrompt(supabase, userId, hasDesktop) {
+  let prompt = SYSTEM_PROMPT_BASE;
+
+  if (!hasDesktop) {
+    prompt += '\n\nATENCAO: O desktop do usuario NAO esta ativo. Se ele pedir para executar acoes no computador, diga para ele conectar primeiro na aba "Tela".';
+  }
+
+  if (supabase) {
+    try {
+      const memoryContext = await agentMemory.getMemoryContext(supabase, userId);
+      const workflowContext = await agentMemory.getWorkflowContext(supabase, userId);
+      prompt += memoryContext;
+      prompt += workflowContext;
+    } catch (err) {
+      console.error('Error loading memory context:', err.message);
+    }
+  }
+
+  return prompt;
+}
+
+const SYSTEM_PROMPT_BASE = `Voce e o Rumo Agente, um assistente inteligente que controla um computador na nuvem para o usuario.
 
 Voce tem acesso a um desktop Linux (XFCE) com os seguintes aplicativos:
 - Firefox (navegador)
@@ -234,16 +413,35 @@ REGRAS IMPORTANTES:
 8. Limite-se a no maximo 8 acoes por mensagem do usuario.
 9. Se for uma pergunta simples que nao precisa do computador, responda normalmente sem usar ferramentas.
 
+MEMORIA E APRENDIZADO:
+10. Quando o usuario mencionar preferencias (nome da fazenda, sistema favorito, unidade de medida), salve usando save_user_preference.
+11. Quando o usuario fornecer login/senha de um sistema, salve usando save_credential e informe que esta criptografado.
+12. Apos completar uma tarefa com sucesso que pode ser repetida, salve como workflow usando save_workflow.
+13. Use a memoria do usuario (listada abaixo) para nao fazer perguntas repetidas.
+14. Quando precisar acessar um sistema, primeiro verifique se tem credenciais salvas com get_credential.
+
+SEGURANCA E CONFIRMACAO:
+15. SEMPRE peca confirmacao antes de: deletar arquivos, fazer pagamentos, enviar emails, instalar programas, executar comandos com sudo.
+16. Use request_confirmation para acoes criticas.
+17. NUNCA mostre senhas em texto no chat. Diga apenas "credenciais recuperadas do cofre seguro".
+18. Se um comando for bloqueado por seguranca, explique ao usuario e peca autorizacao.
+
 CONTEXTO AGROPECUARIO:
 O usuario trabalha com gestao agropecuaria. Ajude com tarefas como:
-- Acessar sistemas agro (Aegro, Conta Azul, etc)
-- Criar planilhas de controle
-- Pesquisar informacoes agricolas
-- Gerar relatorios`;
+- Acessar sistemas agro (Aegro, Conta Azul, Siagri, etc)
+- Criar planilhas de controle (gado, custos, estoque)
+- Pesquisar informacoes agricolas (precos, clima, regulamentacao)
+- Gerar relatorios
+- Automatizar lancamentos repetitivos`;
+
+// Keep SYSTEM_PROMPT for backwards compat
+const SYSTEM_PROMPT = SYSTEM_PROMPT_BASE;
 
 module.exports = {
   DESKTOP_TOOLS,
   SYSTEM_PROMPT,
+  SYSTEM_PROMPT_BASE,
   executeTool,
-  containerName
+  containerName,
+  buildSystemPrompt
 };

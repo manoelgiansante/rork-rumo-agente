@@ -8,7 +8,7 @@ ENV VNC_RESOLUTION=1280x720
 ENV USER=rumo
 ENV HOME=/home/rumo
 
-# Install base packages
+# Install base packages + theme dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     xfce4 xfce4-terminal \
     tigervnc-standalone-server tigervnc-common tigervnc-tools \
@@ -17,9 +17,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     thunar mousepad \
     dbus-x11 \
     xdg-utils \
-    fonts-noto-core \
+    fonts-noto-core fonts-inter \
     sudo curl wget ca-certificates \
     scrot xdotool \
+    unzip sassc librsvg2-bin \
+    gtk2-engines-murrine gtk2-engines-pixbuf \
+    adwaita-icon-theme-full \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
@@ -33,19 +36,24 @@ RUN mkdir -p $HOME/.vnc && \
     chown -R $USER:$USER $HOME
 
 # VNC startup config
-RUN printf '#!/bin/bash\nstartxfce4 &\n' > $HOME/.vnc/xstartup && \
+RUN printf '#!/bin/bash\nunset SESSION_MANAGER\nunset DBUS_SESSION_BUS_ADDRESS\nexport XDG_SESSION_TYPE=x11\neval $(dbus-launch --sh-syntax)\nexec startxfce4\n' > $HOME/.vnc/xstartup && \
     chmod +x $HOME/.vnc/xstartup && \
     chown $USER:$USER $HOME/.vnc/xstartup
 
-# XFCE config directory
-RUN mkdir -p $HOME/.config/xfce4/xfconf/xfce-perchannel-xml && \
-    chown -R $USER:$USER $HOME/.config
+# Setup macOS theme as user
+COPY setup-macos-theme.sh /tmp/setup-macos-theme.sh
+RUN chmod +x /tmp/setup-macos-theme.sh && \
+    su - $USER -c "/tmp/setup-macos-theme.sh" && \
+    rm /tmp/setup-macos-theme.sh
 
 # noVNC symlink
 RUN ln -sf /usr/share/novnc/vnc.html /usr/share/novnc/index.html 2>/dev/null || true
 
 COPY startup.sh /startup.sh
 RUN chmod +x /startup.sh
+
+# Set ownership
+RUN chown -R $USER:$USER $HOME
 
 USER $USER
 WORKDIR $HOME

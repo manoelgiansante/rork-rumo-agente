@@ -7,8 +7,10 @@ const path = require('path');
 const Stripe = require('stripe');
 const { createClient } = require('@supabase/supabase-js');
 const Anthropic = require('@anthropic-ai/sdk');
+const crypto = require('crypto');
 const containerManager = require('./container-manager');
 const desktopAgent = require('./desktop-agent');
+const agentMemory = require('./agent-memory');
 
 const app = express();
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
@@ -186,14 +188,27 @@ app.post('/chat', authenticateUser, async (req, res) => {
     const desktopInfo = containerManager.getDesktopInfo(userId);
     const hasDesktop = desktopInfo.desktop;
 
-    // Build system prompt with desktop context
-    let systemPrompt = desktopAgent.SYSTEM_PROMPT;
-    if (!hasDesktop) {
-      systemPrompt += '\n\nATENCAO: O desktop do usuario NAO esta ativo. Se ele pedir para executar acoes no computador, diga para ele conectar primeiro na aba "Tela".';
-    }
+    // Build system prompt with memory + workflow context
+    const systemPrompt = await desktopAgent.buildSystemPrompt(supabase, userId, hasDesktop);
+
+    // Check if there's a matching workflow for this message
+    const userMessage = messages[messages.length - 1]?.content || '';
+    const matchedWorkflow = await agentMemory.findWorkflow(supabase, userId, userMessage);
+
+    // Session ID for action logging
+    const sessionId = crypto.randomUUID();
 
     // Agentic loop: send to Claude, execute tools, repeat until text response
     let claudeMessages = messages.map(m => ({ role: m.role, content: m.content }));
+
+    // If a workflow was found, add it as context
+    if (matchedWorkflow) {
+      const lastMsg = claudeMessages[claudeMessages.length - 1];
+      if (lastMsg && lastMsg.role === 'user') {
+        lastMsg.content += `\n\n[SISTEMA: Workflow "${matchedWorkflow.name}" encontrado (${matchedWorkflow.success_count}x sucesso). Descricao: ${matchedWorkflow.description}. Software: ${matchedWorkflow.target_software || 'geral'}. Siga esse fluxo se aplicavel.]`;
+      }
+    }
+
     let finalText = '';
     let actionsExecuted = [];
     let iterations = 0;
@@ -206,13 +221,9 @@ app.post('/chat', authenticateUser, async (req, res) => {
         model: 'claude-sonnet-4-20250514',
         max_tokens: 2048,
         system: systemPrompt,
-        messages: claudeMessages
+        messages: claudeMessages,
+        tools: desktopAgent.DESKTOP_TOOLS
       };
-
-      // Only provide tools if desktop is active
-      if (hasDesktop) {
-        requestParams.tools = desktopAgent.DESKTOP_TOOLS;
-      }
 
       const response = await anthropic.messages.create(requestParams);
 
@@ -227,8 +238,11 @@ app.post('/chat', authenticateUser, async (req, res) => {
           hasToolUse = true;
           console.log(`[Agent] Tool: ${block.name}(${JSON.stringify(block.input)}) for user ${userId.substring(0, 8)}`);
 
-          const result = await desktopAgent.executeTool(userId, block.name, block.input);
+          const result = await desktopAgent.executeTool(userId, block.name, block.input, supabase, sessionId);
           actionsExecuted.push({ tool: block.name, input: block.input, result });
+
+          // Log action
+          await agentMemory.logAction(supabase, userId, sessionId, block.name, block.input, result, true);
 
           toolResults.push({
             type: 'tool_result',
@@ -246,6 +260,19 @@ app.post('/chat', authenticateUser, async (req, res) => {
       // Add assistant response and tool results for next iteration
       claudeMessages.push({ role: 'assistant', content: response.content });
       claudeMessages.push({ role: 'user', content: toolResults });
+    }
+
+    // Auto-learn from actions executed
+    if (actionsExecuted.length > 0) {
+      const learnings = agentMemory.extractLearnings(actionsExecuted, userMessage);
+      for (const l of learnings) {
+        await agentMemory.saveMemory(supabase, userId, l.category, l.key, l.value);
+      }
+    }
+
+    // Mark matched workflow as successful
+    if (matchedWorkflow && actionsExecuted.length > 0) {
+      await agentMemory.markWorkflowResult(supabase, matchedWorkflow.id, true);
     }
 
     // Take final screenshot if actions were executed
@@ -439,8 +466,166 @@ app.get('/profile', authenticateUser, async (req, res) => {
   res.json(data);
 });
 
+// ============================================
+// Credenciais - Listar servicos salvos
+// ============================================
+app.get('/credentials', authenticateUser, async (req, res) => {
+  try {
+    const creds = await agentMemory.listCredentials(supabase, req.user.id);
+    res.json(creds);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao listar credenciais' });
+  }
+});
+
+// ============================================
+// Credenciais - Salvar nova credencial
+// ============================================
+app.post('/credentials', authenticateUser, async (req, res) => {
+  try {
+    const { service_name, service_url, username, password, extra_fields } = req.body;
+    if (!service_name || !username || !password) {
+      return res.status(400).json({ error: 'service_name, username e password sao obrigatorios' });
+    }
+    const saved = await agentMemory.saveCredential(supabase, req.user.id, service_name, service_url, username, password, extra_fields);
+    res.json({ success: saved, message: saved ? 'Credencial salva com seguranca' : 'Erro ao salvar' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao salvar credencial' });
+  }
+});
+
+// ============================================
+// Credenciais - Deletar
+// ============================================
+app.delete('/credentials/:serviceName', authenticateUser, async (req, res) => {
+  try {
+    const deleted = await agentMemory.deleteCredential(supabase, req.user.id, req.params.serviceName);
+    res.json({ success: deleted });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao deletar credencial' });
+  }
+});
+
+// ============================================
+// Confirmacoes pendentes
+// ============================================
+app.get('/confirmations', authenticateUser, async (req, res) => {
+  try {
+    const pending = await agentMemory.getPendingConfirmations(supabase, req.user.id);
+    res.json(pending);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar confirmacoes' });
+  }
+});
+
+// ============================================
+// Resolver confirmacao (aprovar/rejeitar)
+// ============================================
+app.post('/confirmations/:id/resolve', authenticateUser, async (req, res) => {
+  try {
+    const { approved } = req.body;
+    const result = await agentMemory.resolveConfirmation(supabase, req.params.id, approved);
+    if (!result) {
+      return res.status(404).json({ error: 'Confirmacao nao encontrada ou ja resolvida' });
+    }
+    res.json({ success: true, status: approved ? 'approved' : 'rejected' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao resolver confirmacao' });
+  }
+});
+
+// ============================================
+// Memoria do agente - ver aprendizados
+// ============================================
+app.get('/memory', authenticateUser, async (req, res) => {
+  try {
+    const { data } = await supabase
+      .from('agent_memory')
+      .select('category, key, value, usage_count, updated_at')
+      .eq('user_id', req.user.id)
+      .order('updated_at', { ascending: false })
+      .limit(100);
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar memoria' });
+  }
+});
+
+// ============================================
+// Memoria - deletar item
+// ============================================
+app.delete('/memory/:category/:key', authenticateUser, async (req, res) => {
+  try {
+    await supabase.from('agent_memory')
+      .delete()
+      .eq('user_id', req.user.id)
+      .eq('category', req.params.category)
+      .eq('key', req.params.key);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao deletar memoria' });
+  }
+});
+
+// ============================================
+// Workflows aprendidos
+// ============================================
+app.get('/workflows', authenticateUser, async (req, res) => {
+  try {
+    const { data } = await supabase
+      .from('learned_workflows')
+      .select('id, name, description, trigger_phrases, target_software, success_count, fail_count, is_active, updated_at')
+      .eq('user_id', req.user.id)
+      .order('success_count', { ascending: false });
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar workflows' });
+  }
+});
+
+// ============================================
+// Workflow - deletar
+// ============================================
+app.delete('/workflows/:id', authenticateUser, async (req, res) => {
+  try {
+    await supabase.from('learned_workflows')
+      .delete()
+      .eq('id', req.params.id)
+      .eq('user_id', req.user.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao deletar workflow' });
+  }
+});
+
+// ============================================
+// Historico de acoes do agente
+// ============================================
+app.get('/action-log', authenticateUser, async (req, res) => {
+  try {
+    const { data } = await supabase
+      .from('agent_action_log')
+      .select('tool_name, tool_input, tool_result, success, created_at')
+      .eq('user_id', req.user.id)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar historico' });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, '127.0.0.1', () => {
+app.listen(PORT, '127.0.0.1', async () => {
   console.log(`Rumo Agente API rodando na porta ${PORT}`);
   console.log(`Desktops ativos: ${containerManager.activeContainers.size}`);
+
+  // Check if memory tables exist
+  const tables = ['agent_memory', 'secure_credentials', 'learned_workflows', 'agent_action_log', 'pending_confirmations'];
+  for (const t of tables) {
+    const { error } = await supabase.from(t).select('*').limit(1);
+    if (error) {
+      console.warn(`[WARN] Table "${t}" missing - run setup-tables.sql in Supabase Dashboard`);
+    }
+  }
 });
