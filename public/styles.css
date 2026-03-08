@@ -971,17 +971,29 @@ a { color:var(--accent); text-decoration:none; }
   }
   .empty-state { padding:48px 20px; }
 
-  /* --- SCREEN TAB desktop --- */
+  /* --- SCREEN TAB desktop --- full page --- */
   #tab-screen {
     padding:0;
   }
+  #tab-screen .tab-header {
+    display:flex;
+    position:absolute;
+    top:0; left:0; right:0;
+    z-index:5;
+    padding:16px 24px;
+    background:linear-gradient(180deg, rgba(13,17,23,0.9) 0%, transparent 100%);
+    border:none;
+  }
+  #tab-screen .tab-header h2 { font-size:1.1rem; }
   .screen-container {
     margin:0;
     border-radius:0;
     flex:1;
+    position:relative;
   }
-  .screen-placeholder h3 { font-size:1.5rem; }
-  .screen-placeholder p { font-size:1.05rem; max-width:450px; }
+  .screen-placeholder h3 { font-size:1.6rem; }
+  .screen-placeholder p { font-size:1.1rem; max-width:500px; }
+  .screen-placeholder .btn-primary { font-size:1rem; padding:14px 32px; }
 
   /* --- CHAT desktop split view --- */
   #tab-chat.active {
@@ -995,8 +1007,6 @@ a { color:var(--accent); text-decoration:none; }
   #tab-chat .tab-header h2 { font-size:1.15rem; }
   #tab-chat .chat-area {
     flex:1;
-    min-width:380px;
-    max-width:480px;
     display:flex;
     flex-direction:column;
     border-right:1px solid var(--card-border);
@@ -1010,12 +1020,12 @@ a { color:var(--accent); text-decoration:none; }
     position:relative;
   }
 
-  .chat-messages { padding:16px 20px; }
-  .bubble { font-size:0.95rem; padding:12px 16px; max-width:100%; }
-  .message { max-width:90%; }
-  .chat-input-bar { padding:12px 16px; }
+  .chat-messages { padding:20px 24px; }
+  .bubble { font-size:0.95rem; padding:14px 18px; }
+  .message { max-width:70%; }
+  .chat-input-bar { padding:14px 24px; }
   .chat-input-bar input {
-    padding:12px 18px;
+    padding:14px 20px;
     font-size:0.95rem;
   }
 
