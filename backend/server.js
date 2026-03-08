@@ -21,7 +21,10 @@ app.use(helmet());
 app.use(cors({
   origin: [
     'http://216.238.111.253',
+    'https://216.238.111.253',
     'https://rork-rumo-agente.vercel.app',
+    'https://agente.agrorumo.com',
+    /\.agrorumo\.com$/,
     /\.rumoagente\.com\.br$/
   ],
   credentials: true
@@ -444,8 +447,8 @@ app.post('/create-checkout', authenticateUser, async (req, res) => {
         },
         quantity: 1,
       }],
-      success_url: 'http://216.238.111.253/#success',
-      cancel_url: 'http://216.238.111.253/#cancel',
+      success_url: 'https://agente.agrorumo.com/#success',
+      cancel_url: 'https://agente.agrorumo.com/#cancel',
     });
 
     res.json({ url: session.url, sessionId: session.id });
@@ -481,8 +484,8 @@ app.post('/buy-credits', authenticateUser, async (req, res) => {
         },
         quantity: 1,
       }],
-      success_url: 'http://216.238.111.253/#success',
-      cancel_url: 'http://216.238.111.253/#cancel',
+      success_url: 'https://agente.agrorumo.com/#success',
+      cancel_url: 'https://agente.agrorumo.com/#cancel',
     });
 
     res.json({ url: session.url });
