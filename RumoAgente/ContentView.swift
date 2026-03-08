@@ -4,7 +4,6 @@ struct ContentView: View {
     let supabase: SupabaseService
     let claudeService: ClaudeService
     let agentService: AgentService
-    @State private var appsViewModel = AppsViewModel()
     @State private var selectedTab = 0
 
     var body: some View {
@@ -16,10 +15,10 @@ struct ContentView: View {
                 ScreenView(supabase: supabase)
             }
             Tab("Chat", systemImage: "message.fill", value: 2) {
-                ChatView(claudeService: claudeService, supabase: supabase, appsViewModel: appsViewModel)
+                ChatView(claudeService: claudeService, supabase: supabase)
             }
             Tab("Apps", systemImage: "square.grid.2x2", value: 3) {
-                AppsView(appsViewModel: appsViewModel)
+                AppsView(supabase: supabase)
             }
             Tab("Perfil", systemImage: "person.fill", value: 4) {
                 ProfileView(supabase: supabase)
@@ -27,6 +26,5 @@ struct ContentView: View {
         }
         .tint(Theme.accent)
         .preferredColorScheme(.dark)
-        .onAppear { appsViewModel.supabase = supabase }
     }
 }

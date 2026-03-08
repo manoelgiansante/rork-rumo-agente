@@ -6,7 +6,7 @@ struct ScreenView: View {
     @State private var isFullScreen = false
     @State private var screenImage: UIImage?
     @State private var isLoading = false
-    @State private var isRefreshing = false
+    @State private var refreshTask: Task<Void, Never>?
     @State private var errorMessage: String?
     @State private var zoomScale: CGFloat = 1.0
     @State private var lastZoomScale: CGFloat = 1.0
@@ -88,7 +88,7 @@ struct ScreenView: View {
                                     .foregroundStyle(Theme.subtleText)
                             }
                         } else {
-                            ScreenPlaceholderView(isConnected: $isConnected, onConnect: {
+                            ScreenPlaceholderView(onConnect: {
                                 connect()
                             })
                         }
@@ -121,7 +121,8 @@ struct ScreenView: View {
         }
         .preferredColorScheme(.dark)
         .onDisappear {
-            isRefreshing = false
+            refreshTask?.cancel()
+            refreshTask = nil
         }
     }
 
@@ -234,7 +235,7 @@ struct ScreenView: View {
 
                     let (startData, startResponse) = try await URLSession.shared.data(for: startReq)
                     guard let startHttp = startResponse as? HTTPURLResponse, startHttp.statusCode == 200 else {
-                        errorMessage = String(data: startData, encoding: .utf8) ?? "Erro"
+                        errorMessage = String(data: startData, encoding: .utf8) ?? "Erro ao iniciar desktop"
                         isLoading = false
                         return
                     }
@@ -247,6 +248,8 @@ struct ScreenView: View {
                 isConnected = true
                 isLoading = false
                 startRefreshing(token: token)
+            } catch is CancellationError {
+                isLoading = false
             } catch {
                 errorMessage = "Sem conexão"
                 isLoading = false
@@ -255,7 +258,8 @@ struct ScreenView: View {
     }
 
     private func disconnect() {
-        isRefreshing = false
+        refreshTask?.cancel()
+        refreshTask = nil
 
         if let token = supabase.authTokenValue {
             Task {
@@ -275,9 +279,9 @@ struct ScreenView: View {
     }
 
     private func startRefreshing(token: String) {
-        isRefreshing = true
-        Task {
-            while isRefreshing {
+        refreshTask?.cancel()
+        refreshTask = Task {
+            while !Task.isCancelled {
                 await fetchScreenshot(token: token)
                 try? await Task.sleep(for: .seconds(1.5))
             }
@@ -295,12 +299,13 @@ struct ScreenView: View {
                   httpResponse.statusCode == 200,
                   let image = UIImage(data: data) else { return }
             screenImage = image
-        } catch {}
+        } catch {
+            // Network error during screenshot fetch — will retry on next cycle
+        }
     }
 }
 
 struct ScreenPlaceholderView: View {
-    @Binding var isConnected: Bool
     var onConnect: () -> Void
     @State private var pulseAnimation = false
 

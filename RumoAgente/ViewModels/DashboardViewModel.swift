@@ -30,6 +30,8 @@ class DashboardViewModel {
     }
 
     var creditsUsedToday: Int {
-        recentTasks.reduce(0) { $0 + $1.creditsUsed }
+        let calendar = Calendar.current
+        let todayTasks = recentTasks.filter { calendar.isDateInToday($0.createdAt) }
+        return todayTasks.reduce(0) { $0 + $1.creditsUsed }
     }
 }

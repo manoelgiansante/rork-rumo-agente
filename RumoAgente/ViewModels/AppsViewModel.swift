@@ -7,7 +7,11 @@ class AppsViewModel {
     var selectedCategory: AppCategory?
     var isLoading = false
 
-    var supabase: SupabaseService?
+    let supabase: SupabaseService
+
+    init(supabase: SupabaseService) {
+        self.supabase = supabase
+    }
 
     private let fallbackApps: [CloudApp] = [
         CloudApp(id: "1", name: "Ponta do S", iconName: "leaf.fill", status: .installed, category: .agro, isSelected: false),
@@ -24,14 +28,8 @@ class AppsViewModel {
 
     func loadApps() async {
         isLoading = true
-
-        if let supabase {
-            let fetched = await supabase.fetchApps()
-            apps = fetched.isEmpty ? fallbackApps : fetched
-        } else {
-            apps = fallbackApps
-        }
-
+        let fetched = await supabase.fetchApps()
+        apps = fetched.isEmpty ? fallbackApps : fetched
         isLoading = false
     }
 

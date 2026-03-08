@@ -2,12 +2,12 @@ import SwiftUI
 
 struct ChatView: View {
     @State private var viewModel: ChatViewModel
-    let appsViewModel: AppsViewModel
+    @State private var appsViewModel: AppsViewModel
     @FocusState private var isInputFocused: Bool
 
-    init(claudeService: ClaudeService, supabase: SupabaseService, appsViewModel: AppsViewModel) {
+    init(claudeService: ClaudeService, supabase: SupabaseService) {
         _viewModel = State(initialValue: ChatViewModel(claudeService: claudeService, supabase: supabase))
-        self.appsViewModel = appsViewModel
+        _appsViewModel = State(initialValue: AppsViewModel(supabase: supabase))
     }
 
     var body: some View {
@@ -44,7 +44,10 @@ struct ChatView: View {
                     .foregroundStyle(Theme.accent)
                 }
             }
-            .task { viewModel.loadInitialMessages() }
+            .task {
+                viewModel.loadInitialMessages()
+                await appsViewModel.loadApps()
+            }
         }
         .preferredColorScheme(.dark)
     }
@@ -343,11 +346,10 @@ struct TypingIndicator: View {
     var body: some View {
         HStack {
             HStack(spacing: 6) {
-                HStack(spacing: 6) {
-                    Image(systemName: "brain.head.profile.fill")
-                        .font(.caption2)
-                        .foregroundStyle(Theme.accent.opacity(0.6))
-                }
+                Image(systemName: "brain.head.profile.fill")
+                    .font(.caption2)
+                    .foregroundStyle(Theme.accent.opacity(0.6))
+
                 HStack(spacing: 5) {
                     ForEach(0..<3, id: \.self) { index in
                         Circle()

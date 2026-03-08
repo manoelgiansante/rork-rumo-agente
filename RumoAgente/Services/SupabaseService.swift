@@ -15,18 +15,29 @@ class SupabaseService {
     }
 
     var authTokenValue: String? {
-        UserDefaults.standard.string(forKey: "auth_token")
+        KeychainService.load(key: "auth_token")
     }
 
     private var authToken: String? {
-        get { UserDefaults.standard.string(forKey: "auth_token") }
-        set { UserDefaults.standard.set(newValue, forKey: "auth_token") }
+        get { KeychainService.load(key: "auth_token") }
+        set {
+            if let newValue {
+                KeychainService.save(key: "auth_token", value: newValue)
+            } else {
+                KeychainService.delete(key: "auth_token")
+            }
+        }
     }
 
-    // NOTE: For production, refresh_token should be stored in Keychain instead of UserDefaults
     private var refreshToken: String? {
-        get { UserDefaults.standard.string(forKey: "refresh_token") }
-        set { UserDefaults.standard.set(newValue, forKey: "refresh_token") }
+        get { KeychainService.load(key: "refresh_token") }
+        set {
+            if let newValue {
+                KeychainService.save(key: "refresh_token", value: newValue)
+            } else {
+                KeychainService.delete(key: "refresh_token")
+            }
+        }
     }
 
     func signUp(email: String, password: String, displayName: String) async throws {
@@ -45,7 +56,7 @@ class SupabaseService {
 
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-            let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
+            let errorBody = String(data: data, encoding: .utf8) ?? "Erro desconhecido"
             throw ServiceError.authError(errorBody)
         }
 
@@ -69,7 +80,7 @@ class SupabaseService {
 
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-            let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
+            let errorBody = String(data: data, encoding: .utf8) ?? "Erro desconhecido"
             throw ServiceError.authError(errorBody)
         }
 
@@ -92,7 +103,6 @@ class SupabaseService {
         guard authToken != nil else { return }
         await loadUserProfile()
         if !isAuthenticated {
-            // Token may have expired, try refreshing
             if await refreshSession() {
                 await loadUserProfile()
             }
@@ -120,7 +130,9 @@ class SupabaseService {
                 refreshToken = json?["refresh_token"] as? String ?? token
                 return true
             }
-        } catch {}
+        } catch {
+            return false
+        }
         return false
     }
 
@@ -263,7 +275,7 @@ class SupabaseService {
         let body: [String: Any] = ["data": ["display_name": displayName]]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (_, _) = try await URLSession.shared.data(for: request)
+        _ = try await URLSession.shared.data(for: request)
     }
 
     func resetPassword(email: String) async throws {
@@ -284,7 +296,7 @@ class SupabaseService {
 
     func fetchProfile() async {
         guard let token = authToken, let userId = currentUser?.id else { return }
-        let urlString = "\(baseURL)/rest/v1/profiles?user_id=eq.\(userId)&select=*&limit=1"
+        let urlString = "\(baseURL)/rest/v1/profiles?id=eq.\(userId)&select=*&limit=1"
         guard let url = URL(string: urlString) else { return }
 
         var request = URLRequest(url: url)
@@ -301,7 +313,9 @@ class SupabaseService {
             if let profile = profiles.first {
                 currentUser = profile
             }
-        } catch {}
+        } catch {
+            // Profile fetch failed — user stays with auth-based profile data
+        }
     }
 
     func fetchTasks() async -> [AgentTask] {
@@ -348,7 +362,7 @@ class SupabaseService {
 
     func fetchTransactions() async -> [Transaction] {
         guard let token = authToken, let userId = currentUser?.id else { return [] }
-        let urlString = "\(baseURL)/rest/v1/transactions?user_id=eq.\(userId)&select=*&order=created_at.desc&limit=50"
+        let urlString = "\(baseURL)/rest/v1/credit_transactions?user_id=eq.\(userId)&select=*&order=created_at.desc&limit=50"
         guard let url = URL(string: urlString) else { return [] }
 
         var request = URLRequest(url: url)

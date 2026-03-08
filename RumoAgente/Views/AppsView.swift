@@ -1,8 +1,12 @@
 import SwiftUI
 
 struct AppsView: View {
-    let appsViewModel: AppsViewModel
+    @State private var appsViewModel: AppsViewModel
     @State private var searchText = ""
+
+    init(supabase: SupabaseService) {
+        _appsViewModel = State(initialValue: AppsViewModel(supabase: supabase))
+    }
 
     var body: some View {
         NavigationStack {

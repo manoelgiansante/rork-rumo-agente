@@ -247,14 +247,15 @@ struct TransactionRow: View {
 
             VStack(alignment: .trailing, spacing: 4) {
                 if transaction.amount != 0 {
-                    Text(transaction.amount > 0 ? "+R$ \(transaction.amount, specifier: "%.2f")" : "R$ \(transaction.amount, specifier: "%.2f")")
+                    Text(transaction.amount > 0 ? "+\(transaction.amount) cr" : "\(transaction.amount) cr")
                         .font(.subheadline.weight(.semibold).monospacedDigit())
-                        .foregroundStyle(transaction.amount > 0 ? .green : Theme.subtleText)
+                        .foregroundStyle(transaction.amount > 0 ? Theme.accent : .orange)
                 }
-                if transaction.credits != 0 {
-                    Text(transaction.credits > 0 ? "+\(transaction.credits) cr" : "\(transaction.credits) cr")
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(transaction.credits > 0 ? Theme.accent : .orange)
+                if let desc = transaction.transactionDescription, !desc.isEmpty {
+                    Text(desc)
+                        .font(.caption)
+                        .foregroundStyle(Theme.subtleText)
+                        .lineLimit(1)
                 }
             }
         }
@@ -267,9 +268,9 @@ struct TransactionRow: View {
 
     private var iconColor: Color {
         switch transaction.type {
-        case .subscription: Theme.accentBlue
-        case .creditPurchase: .green
-        case .creditUsage: .orange
+        case .purchase: .green
+        case .usage: .orange
+        case .bonus: Theme.accentBlue
         case .refund: .purple
         }
     }
