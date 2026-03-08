@@ -671,9 +671,11 @@ a { color:var(--accent); text-decoration:none; }
 .main-content-wrapper { display:contents; }
 
 /* ========== RESPONSIVE ========== */
-@media(min-width:768px) {
+@media(min-width:768px) and (max-width:1023px) {
   .tab-bar { max-width:600px; margin:0 auto; border-radius:16px 16px 0 0; }
   #tab-content { max-width:600px; margin:0 auto; }
+}
+@media(min-width:768px) {
   .auth-container { justify-content:center; }
   .modal-content { border-radius:20px; margin-bottom:20px; }
   .modal { align-items:center; }
@@ -685,8 +687,8 @@ a { color:var(--accent); text-decoration:none; }
   /* --- App Screen Grid Layout --- */
   #app-screen.active {
     display:grid;
-    grid-template-columns:260px 1fr;
-    grid-template-rows:60px 1fr;
+    grid-template-columns:240px 1fr;
+    grid-template-rows:48px 1fr;
     grid-template-areas:
       "sidebar topbar"
       "sidebar content";
@@ -699,104 +701,107 @@ a { color:var(--accent); text-decoration:none; }
     flex-direction:column;
     justify-content:space-between;
     grid-area:sidebar;
-    background:#0A0E14;
-    border-right:1px solid var(--card-border);
+    background:#0A0D12;
+    border-right:1px solid rgba(255,255,255,0.04);
     padding:0;
     overflow-y:auto;
     z-index:10;
   }
 
   .sidebar-top {
-    padding:24px 16px 16px;
+    padding:16px 12px 12px;
   }
 
   .sidebar-logo {
     display:flex;
     align-items:center;
-    gap:12px;
-    padding:0 8px 28px;
-    border-bottom:1px solid var(--card-border);
-    margin-bottom:8px;
+    gap:10px;
+    padding:0 8px 20px;
+    border-bottom:1px solid rgba(255,255,255,0.04);
+    margin-bottom:4px;
   }
   .sidebar-logo-img {
-    width:36px; height:36px;
-    border-radius:50%;
+    width:28px; height:28px;
+    border-radius:8px;
   }
   .sidebar-logo-text {
-    font-size:1.1rem;
-    font-weight:700;
-    color:#fff;
+    font-size:0.95rem;
+    font-weight:600;
+    color:rgba(255,255,255,0.9);
     letter-spacing:-0.3px;
   }
 
   .sidebar-nav {
     display:flex;
     flex-direction:column;
-    gap:2px;
+    gap:1px;
     padding-top:8px;
   }
   .sidebar-item {
     display:flex;
     align-items:center;
-    gap:12px;
-    padding:12px 16px;
+    gap:10px;
+    padding:9px 12px;
     background:none;
     border:none;
-    border-radius:12px;
-    color:var(--subtle);
-    font-size:0.95rem;
+    border-radius:8px;
+    color:rgba(255,255,255,0.45);
+    font-size:0.875rem;
     font-weight:500;
     font-family:inherit;
     cursor:pointer;
-    transition:all 0.15s ease;
+    transition:all 0.12s ease;
     text-align:left;
     width:100%;
+    position:relative;
   }
   .sidebar-item svg {
-    width:20px; height:20px;
+    width:18px; height:18px;
     flex-shrink:0;
+    opacity:0.7;
   }
   .sidebar-item:hover {
-    background:rgba(255,255,255,0.04);
-    color:rgba(255,255,255,0.8);
+    background:rgba(255,255,255,0.05);
+    color:rgba(255,255,255,0.85);
   }
+  .sidebar-item:hover svg { opacity:1; }
   .sidebar-item.active {
-    background:rgba(52,211,153,0.1);
+    background:rgba(52,211,153,0.08);
     color:var(--accent);
   }
+  .sidebar-item.active svg { opacity:1; }
   .sidebar-item.active::before {
     content:'';
     position:absolute;
     left:0;
-    width:3px;
-    height:24px;
+    width:2px;
+    height:20px;
     background:var(--accent);
-    border-radius:0 3px 3px 0;
+    border-radius:0 2px 2px 0;
   }
-  .sidebar-item { position:relative; }
 
   .sidebar-bottom {
-    padding:16px;
-    border-top:1px solid var(--card-border);
+    padding:12px;
+    border-top:1px solid rgba(255,255,255,0.04);
   }
   .sidebar-user {
     display:flex;
     align-items:center;
-    gap:12px;
-    padding:10px 8px;
-    border-radius:12px;
-    transition:background 0.15s ease;
+    gap:10px;
+    padding:8px;
+    border-radius:8px;
+    transition:background 0.12s ease;
     cursor:pointer;
   }
   .sidebar-user:hover { background:rgba(255,255,255,0.04); }
   .sidebar-user-avatar {
-    width:36px; height:36px;
+    width:30px; height:30px;
     border-radius:50%;
-    background:rgba(52,211,153,0.15);
+    background:rgba(52,211,153,0.12);
     display:flex; align-items:center; justify-content:center;
     color:var(--accent);
     font-weight:600;
-    font-size:0.9rem;
+    font-size:0.75rem;
     flex-shrink:0;
   }
   .sidebar-user-info {
@@ -805,74 +810,75 @@ a { color:var(--accent); text-decoration:none; }
     min-width:0;
   }
   .sidebar-user-name {
-    font-size:0.85rem;
-    font-weight:600;
-    color:#fff;
+    font-size:0.8rem;
+    font-weight:500;
+    color:rgba(255,255,255,0.8);
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
   }
   .sidebar-user-plan {
-    font-size:0.75rem;
-    color:var(--subtle);
+    font-size:0.7rem;
+    color:rgba(255,255,255,0.35);
   }
 
-  /* --- Top Bar --- */
+  /* --- Top Bar (minimal like Linear/Vercel) --- */
   .desktop-topbar {
     display:flex !important;
     align-items:center;
     justify-content:space-between;
     grid-area:topbar;
-    padding:0 32px;
+    padding:0 24px;
     background:var(--dark-bg);
-    border-bottom:1px solid var(--card-border);
+    border-bottom:1px solid rgba(255,255,255,0.04);
     z-index:5;
   }
   .topbar-title {
-    font-size:1.25rem;
-    font-weight:700;
-    color:#fff;
+    font-size:0.9rem;
+    font-weight:500;
+    color:rgba(255,255,255,0.7);
+    letter-spacing:-0.2px;
   }
   .topbar-right {
     display:flex;
     align-items:center;
-    gap:20px;
+    gap:12px;
   }
   .topbar-credits {
     display:flex;
     align-items:center;
-    gap:6px;
-    background:rgba(52,211,153,0.08);
-    border:1px solid rgba(52,211,153,0.15);
-    padding:6px 14px;
-    border-radius:20px;
-    font-size:0.85rem;
+    gap:5px;
+    background:rgba(52,211,153,0.06);
+    border:1px solid rgba(52,211,153,0.1);
+    padding:4px 12px;
+    border-radius:6px;
+    font-size:0.8rem;
     font-weight:500;
     color:var(--accent);
   }
   .topbar-credits svg {
-    width:16px; height:16px;
+    width:14px; height:14px;
   }
   .topbar-notif {
     background:none;
     border:none;
-    color:var(--subtle);
+    color:rgba(255,255,255,0.4);
     cursor:pointer;
-    width:36px; height:36px;
-    border-radius:50%;
-    display:flex; align-items:center; justify-content:center;
-    transition:background 0.15s ease;
-  }
-  .topbar-notif:hover { background:rgba(255,255,255,0.06); }
-  .topbar-notif svg { width:20px; height:20px; }
-  .topbar-avatar {
     width:32px; height:32px;
+    border-radius:6px;
+    display:flex; align-items:center; justify-content:center;
+    transition:all 0.12s ease;
+  }
+  .topbar-notif:hover { background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.7); }
+  .topbar-notif svg { width:18px; height:18px; }
+  .topbar-avatar {
+    width:28px; height:28px;
     border-radius:50%;
-    background:rgba(52,211,153,0.15);
+    background:rgba(52,211,153,0.12);
     display:flex; align-items:center; justify-content:center;
     color:var(--accent);
     font-weight:600;
-    font-size:0.8rem;
+    font-size:0.7rem;
     cursor:pointer;
   }
 
@@ -901,20 +907,31 @@ a { color:var(--accent); text-decoration:none; }
 
   /* --- Tab Body desktop adjustments --- */
   .tab-body {
-    padding:24px 32px 32px;
+    padding:28px 36px 36px;
   }
 
-  /* --- DASHBOARD desktop layout --- */
+  /* =============================================
+     DASHBOARD - Linear/Vercel inspired
+     ============================================= */
   #tab-dashboard .tab-body {
-    max-width:1200px;
+    max-width:960px;
+    margin:0 auto;
+    width:100%;
   }
   #tab-dashboard .header-section {
-    padding:0 0 24px;
+    padding:0 0 28px;
   }
-  #tab-dashboard .header-section h3 { font-size:1.6rem; }
-  #tab-dashboard .header-section .date-text { font-size:1rem; }
+  #tab-dashboard .header-section h3 {
+    font-size:1.5rem;
+    font-weight:600;
+    letter-spacing:-0.3px;
+  }
+  #tab-dashboard .header-section .date-text {
+    font-size:0.875rem;
+    color:rgba(255,255,255,0.4);
+  }
 
-  /* Hide the mobile avatar in dashboard header (we have topbar) */
+  /* Hide the mobile avatar in dashboard header */
   #tab-dashboard .header-section .avatar { display:none; }
 
   /* Dashboard cards in 2-column grid */
@@ -927,215 +944,350 @@ a { color:var(--accent); text-decoration:none; }
   .dashboard-cards-row .card { margin-bottom:0; }
 
   .card {
-    border-radius:16px;
-    padding:24px;
+    border-radius:12px;
+    padding:20px 24px;
     margin-bottom:16px;
-    transition:border-color 0.2s ease, box-shadow 0.2s ease;
+    border:1px solid rgba(255,255,255,0.06);
+    background:rgba(255,255,255,0.02);
+    transition:border-color 0.15s ease, box-shadow 0.15s ease;
   }
   .card:hover {
     border-color:rgba(255,255,255,0.1);
-    box-shadow:0 4px 24px rgba(0,0,0,0.2);
+    box-shadow:0 2px 16px rgba(0,0,0,0.15);
   }
 
   .quick-actions {
-    gap:16px;
+    gap:12px;
     margin:24px 0;
   }
   .quick-btn {
     font-size:0.8rem;
     padding:16px 8px;
-    border-radius:14px;
-    background:var(--card-bg);
-    border:1px solid var(--card-border);
-    transition:all 0.15s ease;
+    border-radius:12px;
+    background:rgba(255,255,255,0.02);
+    border:1px solid rgba(255,255,255,0.06);
+    transition:all 0.12s ease;
+    color:rgba(255,255,255,0.6);
   }
   .quick-btn:hover {
-    border-color:rgba(255,255,255,0.1);
-    transform:translateY(-2px);
-    box-shadow:0 4px 16px rgba(0,0,0,0.2);
+    border-color:rgba(255,255,255,0.12);
+    background:rgba(255,255,255,0.04);
+    transform:translateY(-1px);
+    box-shadow:0 2px 12px rgba(0,0,0,0.15);
+    color:rgba(255,255,255,0.9);
   }
   .quick-btn .q-icon {
-    width:56px; height:56px;
-    border-radius:16px;
+    width:48px; height:48px;
+    border-radius:12px;
   }
-  .quick-btn .q-icon svg { width:24px; height:24px; }
+  .quick-btn .q-icon svg { width:22px; height:22px; }
 
-  .section-title { font-size:1.1rem; margin:24px 0 12px; }
+  .section-title {
+    font-size:0.8rem;
+    font-weight:600;
+    margin:28px 0 12px;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    color:rgba(255,255,255,0.35);
+  }
 
-  /* Tasks list wider */
+  /* Tasks list */
   .tasks-list {
-    background:var(--card-bg);
-    border:1px solid var(--card-border);
-    border-radius:16px;
+    background:rgba(255,255,255,0.02);
+    border:1px solid rgba(255,255,255,0.06);
+    border-radius:12px;
     padding:12px;
   }
   .empty-state { padding:48px 20px; }
 
-  /* --- SCREEN TAB desktop --- full page --- */
+  /* =============================================
+     SCREEN TAB - Immersive remote desktop
+     ============================================= */
   #tab-screen {
     padding:0;
+    position:relative;
+    overflow:hidden;
+    background:#000;
   }
   #tab-screen .tab-header {
     display:flex;
     position:absolute;
     top:0; left:0; right:0;
     z-index:5;
-    padding:16px 24px;
-    background:linear-gradient(180deg, rgba(13,17,23,0.9) 0%, transparent 100%);
+    padding:12px 20px;
+    background:linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 100%);
     border:none;
+    pointer-events:auto;
   }
-  #tab-screen .tab-header h2 { font-size:1.1rem; }
+  #tab-screen .tab-header h2 {
+    font-size:0.9rem;
+    font-weight:500;
+    color:rgba(255,255,255,0.7);
+  }
   .screen-container {
+    position:absolute;
+    inset:0;
     margin:0;
     border-radius:0;
-    flex:1;
-    position:relative;
+    background:#000;
   }
-  .screen-placeholder h3 { font-size:1.6rem; }
-  .screen-placeholder p { font-size:1.1rem; max-width:500px; }
-  .screen-placeholder .btn-primary { font-size:1rem; padding:14px 32px; }
+  .screen-placeholder h3 {
+    font-size:1.4rem;
+    font-weight:600;
+    color:rgba(255,255,255,0.9);
+  }
+  .screen-placeholder p {
+    font-size:0.95rem;
+    max-width:400px;
+    color:rgba(255,255,255,0.4);
+  }
+  .screen-placeholder .btn-primary {
+    font-size:0.9rem;
+    padding:12px 28px;
+    border-radius:10px;
+    height:auto;
+    width:auto;
+  }
 
-  /* --- CHAT desktop split view --- */
+  /* =============================================
+     CHAT TAB - ChatGPT/Claude inspired
+     ============================================= */
   #tab-chat.active {
     flex-direction:row;
   }
   #tab-chat .tab-header {
-    display:flex;
-    padding:16px 24px 12px;
-    border-bottom:1px solid var(--card-border);
+    display:none;
   }
-  #tab-chat .tab-header h2 { font-size:1.15rem; }
+
+  /* Chat area takes full width by default */
   #tab-chat .chat-area {
     flex:1;
+    max-width:none;
+    min-width:0;
     display:flex;
     flex-direction:column;
-    border-right:1px solid var(--card-border);
+    border-right:none;
   }
+
+  /* Split screen hidden by default */
   .split-screen {
+    display:none !important;
+  }
+
+  /* When desktop is active, show split view */
+  #tab-chat.has-desktop .chat-area {
+    flex:0 0 50%;
+    border-right:1px solid rgba(255,255,255,0.06);
+  }
+  #tab-chat.has-desktop .split-screen {
     display:flex !important;
-    flex:1;
-    background:#0A0E14;
+    flex:0 0 50%;
+    background:#000;
     align-items:center;
     justify-content:center;
     position:relative;
   }
 
-  .chat-messages { padding:20px 24px; }
-  .bubble { font-size:0.95rem; padding:14px 18px; }
-  .message { max-width:70%; }
-  .chat-input-bar { padding:14px 24px; }
-  .chat-input-bar input {
-    padding:14px 20px;
-    font-size:0.95rem;
+  /* App selector centered */
+  .app-selector {
+    max-width:800px;
+    margin:0 auto;
+    width:100%;
+    padding:10px 24px;
+    border-bottom:1px solid rgba(255,255,255,0.04);
   }
 
-  /* --- APPS desktop grid --- */
+  /* Chat messages centered like ChatGPT */
+  .chat-messages {
+    max-width:800px;
+    margin:0 auto;
+    width:100%;
+    padding:32px 24px;
+  }
+
+  /* Message bubbles */
+  .message { max-width:85%; }
+
+  /* User message - clean accent bubble */
+  .message.user .bubble {
+    background:var(--accent);
+    color:#000;
+    border-radius:20px 20px 6px 20px;
+    padding:14px 18px;
+    font-size:0.95rem;
+    line-height:1.5;
+    box-shadow:none;
+  }
+
+  /* Assistant message - NO background, plain text like ChatGPT */
+  .message.assistant .bubble {
+    background:transparent;
+    border:none;
+    padding:4px 0;
+    font-size:0.95rem;
+    line-height:1.7;
+    color:rgba(255,255,255,0.88);
+    border-radius:0;
+  }
+
+  /* Chat input centered like ChatGPT */
+  .chat-input-bar {
+    max-width:800px;
+    margin:0 auto;
+    width:100%;
+    padding:16px 24px 28px;
+    background:transparent;
+    border-top:none;
+    backdrop-filter:none;
+    -webkit-backdrop-filter:none;
+  }
+  .chat-input-bar input {
+    padding:16px 20px;
+    font-size:1rem;
+    border-radius:14px;
+    background:rgba(255,255,255,0.04);
+    border:1px solid rgba(255,255,255,0.08);
+    transition:border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .chat-input-bar input:focus {
+    border-color:rgba(52,211,153,0.35);
+    box-shadow:0 0 0 3px rgba(52,211,153,0.08);
+    background:rgba(255,255,255,0.05);
+  }
+
+  .bubble { font-size:0.95rem; }
+
+  /* --- APPS desktop grid (app store style) --- */
+  #tab-apps .tab-body {
+    max-width:1100px;
+    margin:0 auto;
+    width:100%;
+  }
   .apps-grid { grid-template-columns:repeat(4,1fr); gap:16px; }
   .app-card {
     padding:24px;
-    border-radius:16px;
-    transition:all 0.2s ease;
+    border-radius:14px;
+    background:rgba(255,255,255,0.02);
+    border:1px solid rgba(255,255,255,0.06);
+    transition:all 0.15s ease;
   }
   .app-card:hover {
     border-color:rgba(255,255,255,0.12);
+    background:rgba(255,255,255,0.04);
     transform:translateY(-2px);
-    box-shadow:0 8px 24px rgba(0,0,0,0.25);
+    box-shadow:0 8px 24px rgba(0,0,0,0.2);
   }
   .app-card-icon {
-    width:64px; height:64px;
-    border-radius:18px;
-    font-size:1.6rem;
+    width:56px; height:56px;
+    border-radius:14px;
+    font-size:1.5rem;
     margin-bottom:14px;
   }
-  .app-card-name { font-size:0.95rem; }
+  .app-card-name { font-size:0.9rem; font-weight:500; }
 
   .cat-chip {
-    padding:10px 20px;
-    font-size:0.9rem;
-    transition:all 0.15s ease;
+    padding:8px 16px;
+    font-size:0.85rem;
+    border-radius:8px;
+    transition:all 0.12s ease;
+    border:1px solid rgba(255,255,255,0.06);
+    background:transparent;
   }
   .cat-chip:hover { background:rgba(255,255,255,0.05); }
+  .cat-chip.active {
+    background:rgba(52,211,153,0.1);
+    border-color:rgba(52,211,153,0.3);
+  }
 
-  /* --- PROFILE desktop centered card --- */
+  /* --- PROFILE desktop (clean settings page) --- */
   #tab-profile .tab-body {
-    max-width:640px;
+    max-width:580px;
     margin:0 auto;
     width:100%;
-    padding-top:32px;
+    padding-top:36px;
   }
 
-  .profile-header { padding:12px 0 28px; }
+  .profile-header { padding:8px 0 32px; }
   .profile-avatar {
-    width:90px; height:90px;
-    font-size:2rem;
+    width:80px; height:80px;
+    font-size:1.8rem;
     margin-bottom:16px;
   }
-  .profile-header h3 { font-size:1.2rem; }
+  .profile-header h3 { font-size:1.15rem; font-weight:600; }
 
   .plan-card {
-    padding:24px;
-    border-radius:16px;
-    transition:all 0.2s ease;
+    padding:20px 24px;
+    border-radius:12px;
+    transition:all 0.15s ease;
+    background:rgba(52,211,153,0.04);
+    border:1px solid rgba(52,211,153,0.1);
   }
   .plan-card:hover {
-    border-color:rgba(52,211,153,0.3);
-    box-shadow:0 4px 20px rgba(0,0,0,0.2);
+    border-color:rgba(52,211,153,0.25);
+    box-shadow:0 2px 12px rgba(0,0,0,0.15);
   }
 
   .settings-row {
-    padding:16px 20px;
-    border-radius:14px;
-    font-size:1rem;
-    transition:background 0.15s ease;
+    padding:14px 16px;
+    border-radius:10px;
+    font-size:0.9rem;
+    background:rgba(255,255,255,0.02);
+    border:1px solid rgba(255,255,255,0.05);
+    transition:all 0.12s ease;
   }
   .settings-row:hover {
-    background:rgba(255,255,255,0.03);
+    background:rgba(255,255,255,0.04);
+    transform:none;
   }
 
   .btn-logout {
-    padding:18px;
-    border-radius:14px;
-    font-size:1rem;
-    transition:background 0.15s ease;
+    padding:14px;
+    border-radius:10px;
+    font-size:0.9rem;
+    transition:background 0.12s ease;
   }
-  .btn-logout:hover { background:rgba(239,68,68,0.15); }
+  .btn-logout:hover { background:rgba(239,68,68,0.12); }
 
-  .btn-delete-account { border-radius:14px; padding:16px; }
+  .btn-delete-account { border-radius:10px; padding:12px; }
 
   /* --- Modal desktop centered --- */
   .modal { align-items:center; }
   .modal-content {
-    border-radius:20px;
-    max-width:520px;
+    border-radius:16px;
+    max-width:480px;
   }
 
   /* --- Tab transition --- */
   .tab-panel.active {
-    animation:tabFadeIn 0.3s cubic-bezier(0.16,1,0.3,1);
+    animation:tabFadeIn 0.2s cubic-bezier(0.16,1,0.3,1);
   }
   @keyframes tabFadeIn {
-    from { opacity:0; transform:translateY(6px); }
+    from { opacity:0; transform:translateY(4px); }
     to { opacity:1; transform:translateY(0); }
   }
 
   /* --- Button hover improvements --- */
   .btn-primary {
-    transition:opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+    transition:opacity 0.12s ease, transform 0.12s ease, box-shadow 0.12s ease;
   }
   .btn-primary:hover {
     opacity:0.95;
     transform:translateY(-1px);
-    box-shadow:0 4px 16px rgba(52,211,153,0.3);
+    box-shadow:0 4px 16px rgba(52,211,153,0.25);
   }
 }
 
 /* ========== Extra wide desktop ========== */
 @media(min-width:1280px) {
   .apps-grid { grid-template-columns:repeat(5,1fr); }
+  .chat-messages { max-width:860px; }
+  .chat-input-bar { max-width:860px; }
+  .app-selector { max-width:860px; }
 }
 
 @media(min-width:1440px) {
-  .tab-body { padding:24px 48px 40px; }
+  .tab-body { padding:28px 48px 40px; }
+  #tab-dashboard .tab-body { max-width:1040px; }
 }
 
 body.fullscreen .tab-bar { display:none; }
