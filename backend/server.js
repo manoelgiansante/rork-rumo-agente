@@ -13,12 +13,37 @@ const desktopAgent = require('./desktop-agent');
 const agentMemory = require('./agent-memory');
 
 const app = express();
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = process.env.STRIPE_SECRET_KEY ? Stripe(process.env.STRIPE_SECRET_KEY) : null;
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
 
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://216.238.111.253',
+    'https://rork-rumo-agente.vercel.app',
+    /\.rumoagente\.com\.br$/
+  ],
+  credentials: true
+}));
+
+// Rate limiting
+const rateLimit = {};
+function rateLimiter(windowMs, max) {
+  return (req, res, next) => {
+    const key = (req.user?.id || req.ip) + ':' + req.path;
+    const now = Date.now();
+    if (!rateLimit[key]) rateLimit[key] = { count: 0, start: now };
+    if (now - rateLimit[key].start > windowMs) {
+      rateLimit[key] = { count: 0, start: now };
+    }
+    rateLimit[key].count++;
+    if (rateLimit[key].count > max) {
+      return res.status(429).json({ error: 'Muitas requisições. Tente novamente em breve.' });
+    }
+    next();
+  };
+}
 
 // Middleware para autenticar requests do app
 async function authenticateUser(req, res, next) {
@@ -126,7 +151,7 @@ app.post('/start-desktop', authenticateUser, async (req, res) => {
       success: true,
       status: result.status,
       desktop: true,
-      noVncUrl: `http://${hostname}:${result.noVncPort}/vnc.html?autoconnect=true&password=rumoagente&resize=scale`,
+      noVncUrl: `http://${hostname}/novnc/${result.noVncPort}/vnc.html?autoconnect=true&password=${result.vncPassword || 'rumoagente'}&resize=scale`,
       message: 'Desktop iniciado com sucesso'
     });
   } catch (err) {
@@ -172,16 +197,19 @@ app.get('/screenshot', authenticateUser, async (req, res) => {
 // ============================================
 // Chat com Claude + Tool Use (agente inteligente)
 // ============================================
-app.post('/chat', authenticateUser, async (req, res) => {
+app.post('/chat', authenticateUser, rateLimiter(60000, 20), async (req, res) => {
   try {
     const { messages, conversationId } = req.body;
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ error: 'messages array é obrigatório' });
+    }
     const userId = req.user.id;
 
     const { data: profile } = await supabase
       .from('profiles').select('credits').eq('user_id', userId).single();
 
     if (!profile || profile.credits <= 0) {
-      return res.status(403).json({ error: 'Sem creditos disponiveis' });
+      return res.status(403).json({ error: 'Sem créditos disponíveis' });
     }
 
     // Check if user has an active desktop
@@ -293,10 +321,14 @@ app.post('/chat', authenticateUser, async (req, res) => {
       ]);
     }
 
-    // Debit credit
-    await supabase.from('profiles')
+    // Debit credit (optimistic locking to prevent race condition)
+    const { data: updateResult } = await supabase.from('profiles')
       .update({ credits: profile.credits - 1 })
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .eq('credits', profile.credits);
+    if (!updateResult || updateResult.length === 0) {
+      console.warn(`[RACE] Credit deduction race detected for user ${userId.substring(0, 8)}`);
+    }
 
     await supabase.from('credit_transactions').insert({
       user_id: userId, amount: -1, type: 'usage',
@@ -317,51 +349,55 @@ app.post('/chat', authenticateUser, async (req, res) => {
 // ============================================
 // Executar comando via agente no desktop do usuario
 // ============================================
-app.post('/execute', authenticateUser, async (req, res) => {
+app.post('/execute', authenticateUser, rateLimiter(60000, 30), async (req, res) => {
   const { action, appContext, parameters } = req.body;
   const userId = req.user.id;
 
   const info = containerManager.getDesktopInfo(userId);
   if (!info.desktop) {
-    return res.status(400).json({ error: 'Desktop nao esta ativo. Inicie o desktop primeiro.' });
+    return res.status(400).json({ error: 'Desktop não está ativo. Inicie o desktop primeiro.' });
   }
 
   const name = 'rumo-desktop-' + userId.replace(/-/g, '').substring(0, 12);
 
+  // Strict whitelist for apps - NEVER interpolate user input into shell
+  const SAFE_APPS = {
+    'firefox': 'firefox',
+    'browser': 'firefox',
+    'terminal': 'xfce4-terminal',
+    'editor': 'mousepad',
+    'files': 'thunar',
+    'arquivos': 'thunar',
+    'calc': 'libreoffice --calc',
+    'excel': 'libreoffice --calc',
+    'writer': 'libreoffice --writer',
+    'word': 'libreoffice --writer',
+  };
+
   try {
-    // Use xdotool to execute actions inside the user's container
-    const { execSync } = require('child_process');
-    let cmd;
+    const { execFileSync } = require('child_process');
+    let args;
 
     if (action === 'type') {
-      cmd = `docker exec ${name} bash -c "export DISPLAY=:1 && xdotool type --delay 50 '${(parameters?.text || '').replace(/'/g, "\\'")}'"`;
+      const text = String(parameters?.text || '');
+      if (text.length > 500) return res.status(400).json({ error: 'Texto muito longo (max 500 chars)' });
+      args = ['exec', name, 'bash', '-c', `export DISPLAY=:1 && xdotool type --delay 50 -- '${text.replace(/'/g, "'\\''")}'`];
     } else if (action === 'click') {
-      const x = parameters?.x || 640;
-      const y = parameters?.y || 360;
-      cmd = `docker exec ${name} bash -c "export DISPLAY=:1 && xdotool mousemove ${x} ${y} && xdotool click 1"`;
+      const x = parseInt(parameters?.x) || 640;
+      const y = parseInt(parameters?.y) || 360;
+      if (x < 0 || x > 1920 || y < 0 || y > 1080) return res.status(400).json({ error: 'Coordenadas inválidas' });
+      args = ['exec', name, 'bash', '-c', `export DISPLAY=:1 && xdotool mousemove ${x} ${y} && xdotool click 1`];
     } else if (action === 'open') {
       const app = (appContext || parameters?.app || 'firefox').toLowerCase();
-      const appCmds = {
-        'firefox': 'firefox &',
-        'browser': 'firefox &',
-        'terminal': 'xfce4-terminal &',
-        'editor': 'mousepad &',
-        'files': 'thunar &',
-        'arquivos': 'thunar &',
-        'calc': 'libreoffice --calc &',
-        'excel': 'libreoffice --calc &',
-        'writer': 'libreoffice --writer &',
-        'word': 'libreoffice --writer &',
-      };
-      const appCmd = appCmds[app] || `${app} &`;
-      cmd = `docker exec ${name} bash -c "export DISPLAY=:1 && ${appCmd}"`;
+      const appCmd = SAFE_APPS[app];
+      if (!appCmd) return res.status(400).json({ error: `App "${app}" não está na lista permitida. Apps: ${Object.keys(SAFE_APPS).join(', ')}` });
+      args = ['exec', name, 'bash', '-c', `export DISPLAY=:1 && ${appCmd} &`];
     } else {
-      return res.status(400).json({ error: 'Acao nao reconhecida' });
+      return res.status(400).json({ error: 'Ação não reconhecida' });
     }
 
-    execSync(cmd, { timeout: 10000 });
+    execFileSync('docker', args, { timeout: 10000 });
 
-    // Take screenshot after action
     await new Promise(r => setTimeout(r, 500));
     const screenshotPath = await containerManager.takeScreenshot(userId);
 
@@ -369,7 +405,7 @@ app.post('/execute', authenticateUser, async (req, res) => {
       success: true,
       message: `Comando "${action}" executado com sucesso.`,
       screenshot_url: screenshotPath ? '/screenshot' : null,
-      task_id: require('crypto').randomUUID()
+      task_id: crypto.randomUUID()
     });
   } catch (err) {
     console.error('Execute error:', err);
@@ -408,14 +444,14 @@ app.post('/create-checkout', authenticateUser, async (req, res) => {
         },
         quantity: 1,
       }],
-      success_url: 'https://rork-rumo-agente.vercel.app/#success',
-      cancel_url: 'https://rork-rumo-agente.vercel.app/#cancel',
+      success_url: 'http://216.238.111.253/#success',
+      cancel_url: 'http://216.238.111.253/#cancel',
     });
 
     res.json({ url: session.url, sessionId: session.id });
   } catch (err) {
     console.error('Checkout error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Erro ao criar checkout. Tente novamente.' });
   }
 });
 
@@ -445,14 +481,14 @@ app.post('/buy-credits', authenticateUser, async (req, res) => {
         },
         quantity: 1,
       }],
-      success_url: 'https://rork-rumo-agente.vercel.app/#success',
-      cancel_url: 'https://rork-rumo-agente.vercel.app/#cancel',
+      success_url: 'http://216.238.111.253/#success',
+      cancel_url: 'http://216.238.111.253/#cancel',
     });
 
     res.json({ url: session.url });
   } catch (err) {
     console.error('Buy credits error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Erro ao processar compra. Tente novamente.' });
   }
 });
 
@@ -524,9 +560,9 @@ app.get('/confirmations', authenticateUser, async (req, res) => {
 app.post('/confirmations/:id/resolve', authenticateUser, async (req, res) => {
   try {
     const { approved } = req.body;
-    const result = await agentMemory.resolveConfirmation(supabase, req.params.id, approved);
+    const result = await agentMemory.resolveConfirmation(supabase, req.params.id, approved, req.user.id);
     if (!result) {
-      return res.status(404).json({ error: 'Confirmacao nao encontrada ou ja resolvida' });
+      return res.status(404).json({ error: 'Confirmação não encontrada ou já resolvida' });
     }
     res.json({ success: true, status: approved ? 'approved' : 'rejected' });
   } catch (err) {

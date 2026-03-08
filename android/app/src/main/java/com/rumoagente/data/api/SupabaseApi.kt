@@ -29,6 +29,14 @@ interface SupabaseApi {
         @Header("Authorization") authorization: String
     ): Response<AuthUser>
 
+    @POST("auth/v1/token")
+    suspend fun signInWithIdToken(
+        @Header("apikey") apiKey: String = Config.SUPABASE_ANON_KEY,
+        @Header("Content-Type") contentType: String = "application/json",
+        @Query("grant_type") grantType: String = "id_token",
+        @Body body: IdTokenRequest
+    ): Response<AuthTokenResponse>
+
     @POST("auth/v1/recover")
     suspend fun recover(
         @Header("apikey") apiKey: String = Config.SUPABASE_ANON_KEY,

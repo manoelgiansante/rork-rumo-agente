@@ -2,6 +2,9 @@ const crypto = require('crypto');
 
 // Encryption key from env (32 bytes for AES-256)
 const ENCRYPTION_KEY = process.env.CREDENTIAL_ENCRYPTION_KEY || 'rumo-agente-default-key-32bytes!';
+if (!process.env.CREDENTIAL_ENCRYPTION_KEY) {
+  console.warn('[SECURITY] CREDENTIAL_ENCRYPTION_KEY não configurada! Usando chave padrão. Defina no .env para produção.');
+}
 const IV_LENGTH = 16;
 
 function encrypt(text) {
@@ -236,17 +239,18 @@ async function createConfirmation(supabase, userId, toolName, toolInput, descrip
   return data?.id;
 }
 
-async function resolveConfirmation(supabase, confirmationId, approved) {
-  const { data, error } = await supabase.from('pending_confirmations')
+async function resolveConfirmation(supabase, confirmationId, approved, userId) {
+  const query = supabase.from('pending_confirmations')
     .update({
       status: approved ? 'approved' : 'rejected',
       resolved_at: new Date().toISOString()
     })
     .eq('id', confirmationId)
-    .eq('status', 'pending')
-    .select('*')
-    .single();
+    .eq('status', 'pending');
 
+  if (userId) query.eq('user_id', userId);
+
+  const { data, error } = await query.select('*').single();
   return data;
 }
 

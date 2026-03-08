@@ -213,9 +213,12 @@ function containerName(userId) {
 
 function execInContainer(userId, cmd) {
   const name = containerName(userId);
-  const fullCmd = `docker exec ${name} bash -c "export DISPLAY=:1 && ${cmd.replace(/"/g, '\\"')}"`;
+  const { execFileSync } = require('child_process');
   try {
-    const result = execSync(fullCmd, { encoding: 'utf-8', timeout: 15000 });
+    const result = execFileSync('docker', ['exec', name, 'bash', '-c', `export DISPLAY=:1 && ${cmd}`], {
+      encoding: 'utf-8',
+      timeout: 15000
+    });
     return { success: true, output: result.trim() };
   } catch (err) {
     return { success: false, error: err.message };
@@ -227,7 +230,8 @@ async function executeTool(userId, toolName, toolInput, supabase, sessionId) {
 
   switch (toolName) {
     case 'open_app': {
-      const appCmd = APP_COMMANDS[toolInput.app_name.toLowerCase()] || toolInput.app_name;
+      const appCmd = APP_COMMANDS[toolInput.app_name.toLowerCase()];
+      if (!appCmd) return `App "${toolInput.app_name}" não encontrado. Apps disponíveis: ${Object.keys(APP_COMMANDS).join(', ')}`;
       execInContainer(userId, `${appCmd} &`);
       await sleep(2000);
       // Track app usage in memory
@@ -238,42 +242,69 @@ async function executeTool(userId, toolName, toolInput, supabase, sessionId) {
     }
 
     case 'type_text': {
-      // Check if this action needs confirmation
       const confirmCheck = agentMemory.shouldConfirm(toolName, toolInput);
       if (confirmCheck && supabase) {
-        return `CONFIRMACAO_NECESSARIA: ${confirmCheck.reason}. O texto contem informacao sensivel. Peca confirmacao ao usuario antes de continuar.`;
+        return `CONFIRMACAO_NECESSARIA: ${confirmCheck.reason}. O texto contém informação sensível. Peça confirmação ao usuário antes de continuar.`;
       }
-      const text = toolInput.text.replace(/'/g, "\\'");
-      execInContainer(userId, `xdotool type --delay 30 '${text}'`);
+      const text = String(toolInput.text || '');
+      if (text.length > 1000) return 'Texto muito longo (máximo 1000 caracteres).';
+      // Use xdotool with -- to prevent flag injection, escape single quotes
+      const safeText = text.replace(/'/g, "'\\''");
+      execInContainer(userId, `xdotool type --delay 30 -- '${safeText}'`);
       return `Texto digitado: "${toolInput.text}"`;
     }
 
     case 'press_key': {
-      let key = toolInput.key;
-      execInContainer(userId, `xdotool key ${key}`);
-      return `Tecla "${toolInput.key}" pressionada.`;
+      const key = String(toolInput.key || '');
+      // Whitelist valid xdotool key names (alphanumeric, modifiers, special keys)
+      if (!/^[a-zA-Z0-9+_]+$/.test(key)) return `Tecla inválida: "${key}"`;
+      if (key.length > 30) return 'Combinação de teclas muito longa.';
+      execInContainer(userId, `xdotool key -- ${key}`);
+      return `Tecla "${key}" pressionada.`;
     }
 
     case 'click': {
+      const x = parseInt(toolInput.x) || 0;
+      const y = parseInt(toolInput.y) || 0;
+      if (x < 0 || x > 1920 || y < 0 || y > 1080) return 'Coordenadas fora da tela.';
       const btn = { left: 1, right: 3, middle: 2 }[toolInput.button || 'left'] || 1;
-      execInContainer(userId, `xdotool mousemove ${toolInput.x} ${toolInput.y} && xdotool click ${btn}`);
-      return `Clique em (${toolInput.x}, ${toolInput.y}).`;
+      execInContainer(userId, `xdotool mousemove ${x} ${y} && xdotool click ${btn}`);
+      return `Clique em (${x}, ${y}).`;
     }
 
     case 'double_click': {
-      execInContainer(userId, `xdotool mousemove ${toolInput.x} ${toolInput.y} && xdotool click --repeat 2 1`);
-      return `Duplo clique em (${toolInput.x}, ${toolInput.y}).`;
+      const x = parseInt(toolInput.x) || 0;
+      const y = parseInt(toolInput.y) || 0;
+      if (x < 0 || x > 1920 || y < 0 || y > 1080) return 'Coordenadas fora da tela.';
+      execInContainer(userId, `xdotool mousemove ${x} ${y} && xdotool click --repeat 2 1`);
+      return `Duplo clique em (${x}, ${y}).`;
     }
 
     case 'run_command': {
-      // Check for dangerous commands
+      const cmd = String(toolInput.command || '');
+      if (cmd.length > 500) return 'Comando muito longo (máximo 500 caracteres).';
+      // Block dangerous patterns
+      const blocked = [
+        /rm\s+(-[a-z]*)?r/i, /sudo\s+/, /apt\s+(remove|purge)/i, /pip\s+uninstall/i,
+        /shutdown/i, /reboot/i, /mkfs/i, /dd\s+if=/i, />\s*\/dev\//i,
+        /chmod\s+777/i, /chown\s+root/i, /curl.*\|\s*(bash|sh)/i,
+        /wget.*\|\s*(bash|sh)/i, /python.*-c.*os\.(system|exec|popen)/i,
+        /eval\s*\(/i, /base64\s+-d.*\|/i, /nc\s+-[a-z]*l/i,
+        /\/etc\/(passwd|shadow|sudoers)/i
+      ];
+      for (const pattern of blocked) {
+        if (pattern.test(cmd)) {
+          return `BLOQUEADO: Comando potencialmente perigoso detectado. Peça confirmação ao usuário.`;
+        }
+      }
       const confirmCheck = agentMemory.shouldConfirm(toolName, toolInput);
       if (confirmCheck) {
-        return `BLOQUEADO: ${confirmCheck.reason}. Risco: ${confirmCheck.risk}. Peca confirmacao ao usuario.`;
+        return `BLOQUEADO: ${confirmCheck.reason}. Risco: ${confirmCheck.risk}. Peça confirmação ao usuário.`;
       }
-      const result = execInContainer(userId, toolInput.command);
+      const result = execInContainer(userId, cmd);
       if (result.success) {
-        return `Comando executado.\nSaida: ${result.output || '(sem saida)'}`;
+        const output = (result.output || '(sem saída)').substring(0, 2000);
+        return `Comando executado.\nSaída: ${output}`;
       }
       return `Erro ao executar comando: ${result.error}`;
     }

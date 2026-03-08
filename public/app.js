@@ -1,25 +1,57 @@
 // Config
 const SUPABASE_URL = 'https://jxcnfyeemdltdfqtgbcl.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4Y25meWVlbWRsdGRmcXRnYmNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg1MDQwNTksImV4cCI6MjA4NDA4MDA1OX0.MEqgaUHb0cDVoDrXY6rc1F6YJLxzbpNiks-SFRCg2go';
-const AGENT_URL = 'http://216.238.111.253';
-const API_URL = '/api';
+const AGENT_URL = '';
+const API_URL = '';
 
 // State
 let authToken = localStorage.getItem('auth_token');
+let refreshToken = localStorage.getItem('refresh_token');
 let currentUser = null;
 let isSignUp = false;
 let selectedApp = null;
 let screenInterval = null;
+let splitScreenInterval = null;
 let apps = [];
 let selectedCategory = null;
+let refreshInterval = null;
+
+let onboardingStep = 0;
 
 // Init
 document.addEventListener('DOMContentLoaded', () => {
   if (authToken) {
     checkSession();
+  } else if (!localStorage.getItem('has_onboarded')) {
+    // Show onboarding for first-time visitors
+    document.getElementById('auth-screen').classList.remove('active');
+    document.getElementById('onboarding-screen').classList.add('active');
   }
   setDate();
 });
+
+function nextOnboarding() {
+  onboardingStep++;
+  if (onboardingStep >= 3) {
+    skipOnboarding();
+    return;
+  }
+  updateOnboarding();
+}
+
+function skipOnboarding() {
+  localStorage.setItem('has_onboarded', 'true');
+  document.getElementById('onboarding-screen').classList.remove('active');
+  document.getElementById('auth-screen').classList.add('active');
+}
+
+function updateOnboarding() {
+  document.querySelectorAll('.onboarding-slide').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.onboarding-dots .dot').forEach(d => d.classList.remove('active'));
+  document.querySelector('.onboarding-slide[data-slide="' + onboardingStep + '"]').classList.add('active');
+  document.querySelectorAll('.onboarding-dots .dot')[onboardingStep].classList.add('active');
+  document.getElementById('onboarding-btn').textContent = onboardingStep === 2 ? 'Começar' : 'Próximo';
+}
 
 function setDate() {
   const d = new Date();
@@ -46,7 +78,7 @@ function toggleAuthMode(e) {
   document.getElementById('signup-name-field').style.display = isSignUp ? 'flex' : 'none';
   document.getElementById('auth-subtitle').textContent = isSignUp ? 'Crie sua conta' : 'Entre na sua conta';
   document.getElementById('auth-submit-btn').textContent = isSignUp ? 'Criar Conta' : 'Entrar';
-  document.getElementById('toggle-text').textContent = isSignUp ? 'Ja tem conta?' : 'Nao tem conta?';
+  document.getElementById('toggle-text').textContent = isSignUp ? 'Já tem conta?' : 'Não tem conta?';
   document.getElementById('toggle-link').textContent = isSignUp ? 'Entrar' : 'Criar conta';
   document.getElementById('forgot-btn').style.display = isSignUp ? 'none' : 'block';
   document.getElementById('consent-checkbox').style.display = isSignUp ? 'block' : 'none';
@@ -56,7 +88,36 @@ function toggleAuthMode(e) {
 function showAuthError(msg) {
   const el = document.getElementById('auth-error');
   el.textContent = msg;
+  el.style.color = '#EF4444';
   el.style.display = 'block';
+}
+
+function showAuthSuccess(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg;
+  el.style.color = '#34D399';
+  el.style.display = 'block';
+}
+
+// Auto-refresh token every 50 minutes (token expires in 60 min)
+function startTokenRefresh() {
+  if (refreshInterval) clearInterval(refreshInterval);
+  refreshInterval = setInterval(async () => {
+    if (!refreshToken) return;
+    try {
+      const res = await supabaseRequest('/auth/v1/token?grant_type=refresh_token', {
+        method: 'POST',
+        body: JSON.stringify({ refresh_token: refreshToken })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        authToken = data.access_token;
+        refreshToken = data.refresh_token;
+        localStorage.setItem('auth_token', authToken);
+        if (refreshToken) localStorage.setItem('refresh_token', refreshToken);
+      }
+    } catch (e) { console.warn('Token refresh failed:', e); }
+  }, 50 * 60 * 1000);
 }
 
 async function handleAuth() {
@@ -65,12 +126,12 @@ async function handleAuth() {
   if (!email || !password) return showAuthError('Preencha todos os campos');
 
   if (isSignUp && !document.getElementById('consent-check').checked) {
-    return showAuthError('Voce deve concordar com a Politica de Privacidade e os Termos de Uso.');
+    return showAuthError('Você deve concordar com a Política de Privacidade e os Termos de Uso.');
   }
 
   const btn = document.getElementById('auth-submit-btn');
   btn.disabled = true;
-  btn.textContent = 'Carregando...';
+  btn.innerHTML = '<span class="auth-spinner"></span>';
 
   try {
     if (isSignUp) {
@@ -83,7 +144,10 @@ async function handleAuth() {
       if (!res.ok) throw new Error(data.error_description || data.msg || 'Erro ao criar conta');
       if (data.access_token) {
         authToken = data.access_token;
+        refreshToken = data.refresh_token;
         localStorage.setItem('auth_token', authToken);
+        if (refreshToken) localStorage.setItem('refresh_token', refreshToken);
+        startTokenRefresh();
         await loadProfile();
         showApp();
       } else {
@@ -97,7 +161,10 @@ async function handleAuth() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error_description || data.msg || 'Email ou senha incorretos');
       authToken = data.access_token;
+      refreshToken = data.refresh_token;
       localStorage.setItem('auth_token', authToken);
+      if (refreshToken) localStorage.setItem('refresh_token', refreshToken);
+      startTokenRefresh();
       await loadProfile();
       showApp();
     }
@@ -131,7 +198,7 @@ async function forgotPassword() {
       method: 'POST',
       body: JSON.stringify({ email })
     });
-    showAuthError('Link de recuperacao enviado! Verifique seu email.');
+    showAuthSuccess('Link de recuperação enviado! Verifique seu email.');
   } catch (e) {
     showAuthError('Erro ao enviar email');
   }
@@ -144,9 +211,11 @@ async function checkSession() {
     if (hash && hash.includes('access_token')) {
       const params = new URLSearchParams(hash.substring(1));
       const token = params.get('access_token');
+      const rToken = params.get('refresh_token');
       if (token) {
         authToken = token;
         localStorage.setItem('auth_token', authToken);
+        if (rToken) { refreshToken = rToken; localStorage.setItem('refresh_token', rToken); }
         window.location.hash = '';
       }
     }
@@ -154,11 +223,12 @@ async function checkSession() {
     if (!authToken) return;
 
     const res = await supabaseRequest('/auth/v1/user');
-    if (!res.ok) { logout(); return; }
+    if (!res.ok) { logout(true); return; }
+    startTokenRefresh();
     await loadProfile();
     showApp();
   } catch (e) {
-    logout();
+    logout(true);
   }
 }
 
@@ -188,15 +258,39 @@ async function loadProfile() {
 function updateUI() {
   if (!currentUser) return;
   const initial = (currentUser.displayName || 'U')[0].toUpperCase();
+  const planLabel = 'Plano ' + currentUser.plan.charAt(0).toUpperCase() + currentUser.plan.slice(1);
 
-  document.getElementById('greeting').textContent = 'Ola, ' + currentUser.displayName + '!';
+  document.getElementById('greeting').textContent = 'Olá, ' + currentUser.displayName + '!';
   document.getElementById('avatar-initial').textContent = initial;
   document.getElementById('credits-count').textContent = currentUser.credits;
   document.getElementById('profile-name').textContent = currentUser.displayName;
   document.getElementById('profile-email').textContent = currentUser.email;
   document.getElementById('profile-avatar').textContent = initial;
-  document.getElementById('plan-name').textContent = 'Plano ' + currentUser.plan.charAt(0).toUpperCase() + currentUser.plan.slice(1);
-  document.getElementById('plan-credits').textContent = currentUser.credits + ' creditos restantes';
+  document.getElementById('plan-name').textContent = planLabel;
+  document.getElementById('plan-credits').textContent = currentUser.credits + ' créditos restantes';
+
+  // Update desktop sidebar & topbar elements
+  const sidebarAvatar = document.getElementById('sidebar-avatar');
+  if (sidebarAvatar) sidebarAvatar.textContent = initial;
+  const sidebarName = document.getElementById('sidebar-user-name');
+  if (sidebarName) sidebarName.textContent = currentUser.displayName;
+  const sidebarPlan = document.getElementById('sidebar-user-plan');
+  if (sidebarPlan) sidebarPlan.textContent = planLabel;
+  const topbarAvatar = document.getElementById('topbar-avatar');
+  if (topbarAvatar) topbarAvatar.textContent = initial;
+  const topbarCredits = document.getElementById('topbar-credits-count');
+  if (topbarCredits) topbarCredits.textContent = currentUser.credits;
+
+  // Update credits used today
+  document.getElementById('credits-used').textContent = getCreditsUsedToday();
+
+  // Update circular progress
+  const maxCredits = { free: 10, starter: 100, pro: 500, enterprise: 2000 }[currentUser.plan] || 10;
+  const ratio = Math.min(currentUser.credits / maxCredits, 1);
+  const circumference = 2 * Math.PI * 20; // r=20
+  const offset = circumference * (1 - ratio);
+  const fg = document.querySelector('.circular-progress .fg');
+  if (fg) fg.setAttribute('stroke-dashoffset', offset);
 
   loadApps();
   loadAppSelector();
@@ -204,31 +298,82 @@ function updateUI() {
 }
 
 function showApp() {
+  document.getElementById('onboarding-screen').classList.remove('active');
   document.getElementById('auth-screen').classList.remove('active');
   document.getElementById('app-screen').classList.add('active');
 }
 
-function logout() {
+function logout(skipConfirm) {
+  if (!skipConfirm && !confirm('Sair da conta?')) return;
   authToken = null;
+  refreshToken = null;
   currentUser = null;
   localStorage.removeItem('auth_token');
+  localStorage.removeItem('refresh_token');
+  if (refreshInterval) { clearInterval(refreshInterval); refreshInterval = null; }
+  if (splitScreenInterval) { clearInterval(splitScreenInterval); splitScreenInterval = null; }
   disconnectScreen();
   document.getElementById('app-screen').classList.remove('active');
   document.getElementById('auth-screen').classList.add('active');
 }
 
 // ============ NAVIGATION ============
+const tabTitles = {
+  dashboard: 'Dashboard',
+  screen: 'Tela',
+  chat: 'Agente IA',
+  apps: 'Apps',
+  profile: 'Perfil'
+};
+
 function switchTab(name) {
+  // Stop split-screen fetching when leaving chat
+  if (splitScreenInterval) { clearInterval(splitScreenInterval); splitScreenInterval = null; }
+
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
-  document.querySelector('.tab-item[data-tab="' + name + '"]').classList.add('active');
+
+  // Update bottom tab bar (mobile)
+  const mobileTab = document.querySelector('.tab-item[data-tab="' + name + '"]');
+  if (mobileTab) mobileTab.classList.add('active');
+
+  // Update sidebar (desktop)
+  const sidebarTab = document.querySelector('.sidebar-item[data-tab="' + name + '"]');
+  if (sidebarTab) sidebarTab.classList.add('active');
+
+  // Update topbar title
+  const topbarTitle = document.getElementById('topbar-title');
+  if (topbarTitle) topbarTitle.textContent = tabTitles[name] || name;
 
   if (name === 'chat') {
     const input = document.getElementById('chat-input');
     setTimeout(() => input.focus(), 100);
     scrollChat();
+    // Start split-screen screenshot fetching on desktop
+    if (window.innerWidth >= 1024) {
+      fetchSplitScreenshot();
+      splitScreenInterval = setInterval(fetchSplitScreenshot, 2000);
+    }
   }
+}
+
+async function fetchSplitScreenshot() {
+  try {
+    const res = await fetch(AGENT_URL + '/screenshot', {
+      cache: 'no-store',
+      headers: { 'Authorization': 'Bearer ' + authToken }
+    });
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const img = document.getElementById('split-screen-image');
+    if (!img) return;
+    const old = img.src;
+    img.src = url;
+    if (old && old.startsWith('blob:')) URL.revokeObjectURL(old);
+  } catch (e) {}
 }
 
 // ============ SCREEN ============
@@ -360,14 +505,31 @@ async function checkAgentStatus() {
 }
 
 // ============ CHAT ============
+// Configure marked for safe markdown rendering
+if (typeof marked !== 'undefined') {
+  marked.setOptions({ breaks: true, gfm: true });
+}
+
 async function sendChat() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
   if (!text) return;
   input.value = '';
+  document.getElementById('send-btn').disabled = true;
 
   addMessage('user', text);
-  showTyping();
+
+  // Create assistant message placeholder for streaming
+  const container = document.getElementById('chat-messages');
+  const time = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+  const div = document.createElement('div');
+  div.className = 'message assistant';
+  div.innerHTML = '<div class="bubble streaming"><span class="stream-content"></span><span class="cursor-blink">|</span></div><span class="msg-time">' + time + '</span>';
+  container.appendChild(div);
+  scrollChat();
+
+  const streamContent = div.querySelector('.stream-content');
+  const cursor = div.querySelector('.cursor-blink');
 
   try {
     const res = await fetch(API_URL + '/chat', {
@@ -382,28 +544,102 @@ async function sendChat() {
       })
     });
 
-    hideTyping();
+    if (!res.ok) {
+      // Handle error response
+      try {
+        const data = await res.json();
+        streamContent.innerHTML = typeof marked !== 'undefined' ? marked.parse(data.message || data.error || 'Erro') : escapeHtml(data.message || data.error || 'Erro');
+      } catch (e) {
+        streamContent.textContent = 'Desculpe, ocorreu um erro. Tente novamente.';
+      }
+      cursor.remove();
+      return;
+    }
 
-    if (res.ok) {
-      const data = await res.json();
-      addMessage('assistant', data.message);
-      if (currentUser) currentUser.credits = Math.max(0, currentUser.credits - 1);
-      document.getElementById('credits-count').textContent = currentUser?.credits || 0;
+    // Check if response is streaming (SSE) or regular JSON
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('text/event-stream') || contentType.includes('text/plain')) {
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.substring(6);
+            if (data === '[DONE]') continue;
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.text) {
+                fullText += parsed.text;
+                streamContent.innerHTML = typeof marked !== 'undefined' ? marked.parse(fullText) : escapeHtml(fullText);
+                scrollChat();
+              }
+              if (parsed.credits !== undefined && currentUser) {
+                currentUser.credits = parsed.credits;
+                document.getElementById('credits-count').textContent = parsed.credits;
+                var _tc = document.getElementById('topbar-credits-count');
+                if (_tc) _tc.textContent = parsed.credits;
+              }
+            } catch (e) {
+              // Plain text chunk
+              fullText += data;
+              streamContent.innerHTML = typeof marked !== 'undefined' ? marked.parse(fullText) : escapeHtml(fullText);
+              scrollChat();
+            }
+          }
+        }
+      }
     } else {
-      addMessage('assistant', 'Desculpe, ocorreu um erro. Tente novamente.');
+      // Regular JSON response (fallback)
+      const data = await res.json();
+      streamContent.innerHTML = typeof marked !== 'undefined' ? marked.parse(data.message || '') : escapeHtml(data.message || '');
+    }
+
+    cursor.remove();
+    if (currentUser) {
+      currentUser.credits = Math.max(0, currentUser.credits - 1);
+      document.getElementById('credits-count').textContent = currentUser?.credits || 0;
+      var _tc2 = document.getElementById('topbar-credits-count');
+      if (_tc2) _tc2.textContent = currentUser?.credits || 0;
+      incrementCreditsUsed();
     }
   } catch (e) {
-    hideTyping();
-    addMessage('assistant', 'Erro de conexao. Verifique sua internet.');
+    streamContent.textContent = 'Erro de conexão. Verifique sua internet.';
+    cursor.remove();
   }
 }
+
+// Disable send button when input is empty
+document.addEventListener('DOMContentLoaded', () => {
+  const chatInput = document.getElementById('chat-input');
+  const sendBtn = document.getElementById('send-btn');
+  if (chatInput && sendBtn) {
+    sendBtn.disabled = true;
+    chatInput.addEventListener('input', () => {
+      sendBtn.disabled = !chatInput.value.trim();
+    });
+  }
+});
 
 function addMessage(role, content) {
   const container = document.getElementById('chat-messages');
   const time = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
   const div = document.createElement('div');
   div.className = 'message ' + role;
-  div.innerHTML = '<div class="bubble">' + escapeHtml(content) + '</div><span class="msg-time">' + time + '</span>';
+  let rendered;
+  if (role === 'assistant' && typeof marked !== 'undefined') {
+    rendered = marked.parse(content);
+  } else {
+    rendered = escapeHtml(content);
+  }
+  div.innerHTML = '<div class="bubble">' + rendered + '</div><span class="msg-time">' + time + '</span>';
   container.appendChild(div);
   scrollChat();
 }
@@ -570,3 +806,82 @@ async function buyCredits(amount) {
     alert('Erro ao comprar creditos');
   }
 }
+
+// ============ CREDITS USED TODAY ============
+function getCreditsUsedTodayKey() {
+  return 'credits_used_' + new Date().toISOString().split('T')[0];
+}
+
+function getCreditsUsedToday() {
+  return parseInt(localStorage.getItem(getCreditsUsedTodayKey()) || '0', 10);
+}
+
+function incrementCreditsUsed() {
+  const key = getCreditsUsedTodayKey();
+  const current = parseInt(localStorage.getItem(key) || '0', 10);
+  localStorage.setItem(key, current + 1);
+  document.getElementById('credits-used').textContent = current + 1;
+}
+
+// ============ DELETE ACCOUNT ============
+async function deleteAccount() {
+  if (!confirm('Tem certeza? Esta ação é irreversível e todos os seus dados serão excluídos.')) return;
+  try {
+    // Mark user for deletion via profile update
+    await fetch(SUPABASE_URL + '/rest/v1/profiles?user_id=eq.' + currentUser.id, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + authToken,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({ deleted_at: new Date().toISOString() })
+    });
+    alert('Sua conta foi marcada para exclusão. Seus dados serão removidos em até 30 dias.');
+    logout(true);
+  } catch (e) {
+    alert('Erro ao excluir conta. Tente novamente ou entre em contato com contato@rumoagente.com.br');
+  }
+}
+
+// ============ SETTINGS ============
+function settingsIdioma() {
+  alert('Apenas Português disponível no momento.');
+}
+
+function settingsNotificacoes(row) {
+  const current = localStorage.getItem('rumo_notificacoes') || 'Ativadas';
+  const next = current === 'Ativadas' ? 'Desativadas' : 'Ativadas';
+  localStorage.setItem('rumo_notificacoes', next);
+  const valueEl = document.getElementById('notif-value');
+  if (valueEl) valueEl.textContent = next;
+
+  if (next === 'Ativadas' && 'Notification' in window) {
+    Notification.requestPermission();
+  }
+}
+
+function settingsAparencia(row) {
+  const cycle = ['Automático', 'Escuro', 'Claro'];
+  const current = localStorage.getItem('rumo_aparencia') || 'Automático';
+  const idx = cycle.indexOf(current);
+  const next = cycle[(idx + 1) % cycle.length];
+  localStorage.setItem('rumo_aparencia', next);
+  const valueEl = document.getElementById('aparencia-value');
+  if (valueEl) valueEl.textContent = next;
+}
+
+// Load saved settings on init
+document.addEventListener('DOMContentLoaded', () => {
+  const savedNotif = localStorage.getItem('rumo_notificacoes');
+  if (savedNotif) {
+    const el = document.getElementById('notif-value');
+    if (el) el.textContent = savedNotif;
+  }
+  const savedAparencia = localStorage.getItem('rumo_aparencia');
+  if (savedAparencia) {
+    const el = document.getElementById('aparencia-value');
+    if (el) el.textContent = savedAparencia;
+  }
+});

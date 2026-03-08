@@ -1,5 +1,6 @@
 package com.rumoagente.ui.screens
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,26 +21,81 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
 import com.rumoagente.data.api.RetrofitInstance
 import com.rumoagente.data.models.UserProfile
 import com.rumoagente.ui.theme.RumoAgenteTheme
 import com.rumoagente.ui.theme.RumoColors
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+
+private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings_prefs")
+
+private object SettingsKeys {
+    val LANGUAGE = stringPreferencesKey("language")
+    val NOTIFICATIONS = booleanPreferencesKey("notifications_enabled")
+    val APPEARANCE = stringPreferencesKey("appearance")
+}
+
+enum class AppLanguage(val label: String, val code: String) {
+    PT_BR("Portugues (BR)", "pt-BR"),
+    EN("English", "en")
+}
+
+enum class AppAppearance(val label: String) {
+    DARK("Escuro"),
+    LIGHT("Claro"),
+    AUTO("Automatico")
+}
 
 @Composable
 fun ProfileScreen(
     onNavigateToSubscription: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
     var displayName by remember { mutableStateOf("Carregando...") }
     var displayEmail by remember { mutableStateOf("") }
     var displayPlan by remember { mutableStateOf("Free") }
     var displayCredits by remember { mutableStateOf(0) }
     var displayInitial by remember { mutableStateOf("?") }
 
+    // Settings state
+    var language by remember { mutableStateOf(AppLanguage.PT_BR) }
+    var notificationsEnabled by remember { mutableStateOf(true) }
+    var appearance by remember { mutableStateOf(AppAppearance.DARK) }
+
+    // Dialogs
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var isDeleting by remember { mutableStateOf(false) }
+
+    // Load saved preferences
+    LaunchedEffect(Unit) {
+        val prefs = context.settingsDataStore.data.firstOrNull()
+        if (prefs != null) {
+            val langCode = prefs[SettingsKeys.LANGUAGE]
+            language = AppLanguage.entries.find { it.code == langCode } ?: AppLanguage.PT_BR
+            notificationsEnabled = prefs[SettingsKeys.NOTIFICATIONS] ?: true
+            val appearanceVal = prefs[SettingsKeys.APPEARANCE]
+            appearance = AppAppearance.entries.find { it.name == appearanceVal } ?: AppAppearance.DARK
+        }
+    }
+
+    // Load profile
     LaunchedEffect(Unit) {
         val token = RetrofitInstance.authToken ?: return@LaunchedEffect
         try {
@@ -58,6 +114,134 @@ fun ProfileScreen(
                 }
             }
         } catch (_: Exception) { }
+    }
+
+    fun saveLanguage(newLang: AppLanguage) {
+        language = newLang
+        coroutineScope.launch {
+            context.settingsDataStore.edit { prefs ->
+                prefs[SettingsKeys.LANGUAGE] = newLang.code
+            }
+        }
+    }
+
+    fun toggleNotifications() {
+        notificationsEnabled = !notificationsEnabled
+        coroutineScope.launch {
+            context.settingsDataStore.edit { prefs ->
+                prefs[SettingsKeys.NOTIFICATIONS] = notificationsEnabled
+            }
+        }
+    }
+
+    fun cycleAppearance() {
+        appearance = when (appearance) {
+            AppAppearance.DARK -> AppAppearance.LIGHT
+            AppAppearance.LIGHT -> AppAppearance.AUTO
+            AppAppearance.AUTO -> AppAppearance.DARK
+        }
+        coroutineScope.launch {
+            context.settingsDataStore.edit { prefs ->
+                prefs[SettingsKeys.APPEARANCE] = appearance.name
+            }
+        }
+    }
+
+    fun handleDeleteAccount() {
+        isDeleting = true
+        coroutineScope.launch {
+            try {
+                // Clear local data
+                context.settingsDataStore.edit { it.clear() }
+                RetrofitInstance.authToken = null
+                isDeleting = false
+                showDeleteConfirmDialog = false
+                onLogout()
+            } catch (_: Exception) {
+                isDeleting = false
+            }
+        }
+    }
+
+    // Delete account first dialog
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            containerColor = RumoColors.CardBg,
+            titleContentColor = Color.White,
+            textContentColor = RumoColors.SubtleText,
+            title = { Text("Excluir conta") },
+            text = {
+                Text("Tem certeza que deseja excluir sua conta? Esta acao e irreversivel e todos os seus dados serao perdidos.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        showDeleteConfirmDialog = true
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = RumoColors.Red)
+                ) {
+                    Text("Continuar")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteDialog = false },
+                    colors = ButtonDefaults.textButtonColors(contentColor = RumoColors.SubtleText)
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // Delete account second confirmation dialog
+    if (showDeleteConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!isDeleting) showDeleteConfirmDialog = false },
+            containerColor = RumoColors.CardBg,
+            titleContentColor = RumoColors.Red,
+            textContentColor = RumoColors.SubtleText,
+            icon = {
+                Icon(
+                    Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = RumoColors.Red,
+                    modifier = Modifier.size(32.dp)
+                )
+            },
+            title = { Text("Confirmacao final") },
+            text = {
+                Text("Esta e sua ultima chance. Ao confirmar, sua conta e todos os dados associados serao permanentemente excluidos.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = { handleDeleteAccount() },
+                    colors = ButtonDefaults.buttonColors(containerColor = RumoColors.Red),
+                    enabled = !isDeleting
+                ) {
+                    if (isDeleting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Text("Excluir permanentemente", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteConfirmDialog = false },
+                    enabled = !isDeleting,
+                    colors = ButtonDefaults.textButtonColors(contentColor = RumoColors.SubtleText)
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 
     Column(
@@ -177,26 +361,35 @@ fun ProfileScreen(
             SettingsRow(
                 icon = Icons.Default.Language,
                 title = "Idioma",
-                subtitle = "Portugues (BR)",
-                iconColor = RumoColors.AccentBlue
+                subtitle = language.label,
+                iconColor = RumoColors.AccentBlue,
+                onClick = {
+                    saveLanguage(
+                        if (language == AppLanguage.PT_BR) AppLanguage.EN
+                        else AppLanguage.PT_BR
+                    )
+                }
             )
-            SettingsRow(
+            SettingsRowWithSwitch(
                 icon = Icons.Default.Notifications,
                 title = "Notificacoes",
-                subtitle = "Ativadas",
-                iconColor = RumoColors.Orange
+                isChecked = notificationsEnabled,
+                iconColor = RumoColors.Orange,
+                onToggle = { toggleNotifications() }
             )
             SettingsRow(
                 icon = Icons.Default.DarkMode,
                 title = "Aparencia",
-                subtitle = "Escuro",
-                iconColor = RumoColors.Purple
+                subtitle = appearance.label,
+                iconColor = RumoColors.Purple,
+                onClick = { cycleAppearance() }
             )
             SettingsRow(
-                icon = Icons.Default.Lock,
-                title = "Privacidade",
-                subtitle = "Gerenciar dados",
-                iconColor = RumoColors.Pink
+                icon = Icons.Default.DeleteForever,
+                title = "Excluir conta",
+                subtitle = "Apagar todos os dados",
+                iconColor = RumoColors.Red,
+                onClick = { showDeleteDialog = true }
             )
         }
 
@@ -332,6 +525,61 @@ private fun SettingsRow(
             contentDescription = null,
             tint = RumoColors.SubtleText.copy(alpha = 0.5f),
             modifier = Modifier.size(18.dp)
+        )
+    }
+}
+
+@Composable
+private fun SettingsRowWithSwitch(
+    icon: ImageVector,
+    title: String,
+    isChecked: Boolean,
+    iconColor: Color = RumoColors.AccentBlue,
+    onToggle: () -> Unit = {}
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onToggle)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .background(iconColor.copy(alpha = 0.12f), RoundedCornerShape(8.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = iconColor,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = if (isChecked) "Ativadas" else "Desativadas",
+                color = RumoColors.SubtleText,
+                fontSize = 12.sp
+            )
+        }
+        Switch(
+            checked = isChecked,
+            onCheckedChange = { onToggle() },
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = RumoColors.Accent,
+                uncheckedThumbColor = RumoColors.SubtleText,
+                uncheckedTrackColor = RumoColors.SurfaceVariant
+            )
         )
     }
 }

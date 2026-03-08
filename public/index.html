@@ -2,12 +2,52 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0D1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Rumo Agente</title>
 <link rel="stylesheet" href="styles.css">
 <link rel="icon" href="favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="logo.png">
 </head>
 <body>
+
+<!-- ONBOARDING SCREEN -->
+<div id="onboarding-screen" class="screen">
+  <div class="onboarding-container">
+    <div class="onboarding-slides" id="onboarding-slides">
+      <div class="onboarding-slide active" data-slide="0">
+        <div class="onboarding-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:64px;height:64px;color:var(--accent)"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        </div>
+        <h2>Seu Computador na Nuvem</h2>
+        <p>Um desktop completo, privado e seguro rodando na nuvem. Acesse de qualquer lugar, a qualquer hora.</p>
+      </div>
+      <div class="onboarding-slide" data-slide="1">
+        <div class="onboarding-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor" style="width:64px;height:64px;color:var(--accent-blue)"><path d="M21.928 11.607c-.202-.488-.635-.605-.928-.633V8c0-1.103-.897-2-2-2h-6V4.61c.305-.274.5-.668.5-1.11a1.5 1.5 0 0 0-3 0c0 .442.195.836.5 1.11V6H5c-1.103 0-2 .897-2 2v2.997l-.082.006A1 1 0 0 0 1.99 12v2a1 1 0 0 0 1 1H3v5c0 1.103.897 2 2 2h14c1.103 0 2-.897 2-2v-5a1 1 0 0 0 1-1v-1.938a1.006 1.006 0 0 0-.072-.455zM5 20V8h14l.001 3.996L19 12v2l.001.005.001 5.995H5z"/><ellipse cx="8.5" cy="12" rx="1.5" ry="2"/><ellipse cx="15.5" cy="12" rx="1.5" ry="2"/><path d="M8 16h8v2H8z"/></svg>
+        </div>
+        <h2>Agente IA Inteligente</h2>
+        <p>Um assistente que controla o computador por você. Basta pedir e ele executa: abre sistemas, preenche planilhas, pesquisa dados.</p>
+      </div>
+      <div class="onboarding-slide" data-slide="2">
+        <div class="onboarding-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor" style="width:64px;height:64px;color:var(--accent-orange)"><path d="M12 22c4.97 0 9-2.69 9-6V8c0-3.31-4.03-6-9-6S3 4.69 3 8v8c0 3.31 4.03 6 9 6zM12 4c3.86 0 7 1.79 7 4s-3.14 4-7 4-7-1.79-7-4 3.14-4 7-4z"/></svg>
+        </div>
+        <h2>Feito para o Agronegócio</h2>
+        <p>Acesse Aegro, Ponta do S, Conta Azul e outros sistemas agro. O agente conhece o seu dia a dia no campo.</p>
+      </div>
+    </div>
+    <div class="onboarding-dots" id="onboarding-dots">
+      <span class="dot active"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+    </div>
+    <button class="btn-primary onboarding-btn" id="onboarding-btn" onclick="nextOnboarding()">Próximo</button>
+    <button class="btn-link onboarding-skip" onclick="skipOnboarding()">Pular</button>
+  </div>
+</div>
 
 <!-- AUTH SCREEN -->
 <div id="auth-screen" class="screen active">
@@ -20,25 +60,27 @@
     <p class="auth-subtitle" id="auth-subtitle">Entre na sua conta</p>
 
     <div id="signup-name-field" class="input-group" style="display:none">
-      <span class="input-icon">👤</span>
+      <div class="input-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>
       <input type="text" id="auth-name" placeholder="Nome completo" autocomplete="name">
     </div>
     <div class="input-group">
-      <span class="input-icon">✉️</span>
+      <div class="input-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></div>
       <input type="email" id="auth-email" placeholder="Email" autocomplete="email">
     </div>
     <div class="input-group">
-      <span class="input-icon">🔒</span>
+      <div class="input-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM9 8V6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9z"/></svg></div>
       <input type="password" id="auth-password" placeholder="Senha" autocomplete="current-password">
-      <button class="toggle-pass" onclick="togglePassword()">👁️</button>
+      <button class="toggle-pass" onclick="togglePassword()" aria-label="Mostrar senha">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+      </button>
     </div>
 
     <p id="auth-error" class="error-text" style="display:none"></p>
 
-    <div id="consent-checkbox" style="display:none; margin: 12px 0; font-size: 13px; color: #aaa;">
-      <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer;">
-        <input type="checkbox" id="consent-check" style="margin-top: 3px; accent-color: #34D399;">
-        <span>Li e concordo com a <a href="/privacidade" target="_blank" style="color: #34D399;">Politica de Privacidade</a> e os <a href="/termos" target="_blank" style="color: #34D399;">Termos de Uso</a>.</span>
+    <div id="consent-checkbox" style="display:none; margin:12px 0; font-size:13px; color:var(--subtle);">
+      <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer;">
+        <input type="checkbox" id="consent-check" style="margin-top:3px; accent-color:#34D399;">
+        <span>Li e concordo com a <a href="/privacidade.html" target="_blank" style="color:#34D399;">Política de Privacidade</a> e os <a href="/termos.html" target="_blank" style="color:#34D399;">Termos de Uso</a>.</span>
       </label>
     </div>
 
@@ -48,14 +90,16 @@
     <div class="divider"><span>ou</span></div>
 
     <button class="btn-social btn-apple" onclick="signInWithApple()">
-      <span>&#xF8FF;</span> Continuar com Apple
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
+      Continuar com Apple
     </button>
     <button class="btn-social btn-google" onclick="signInWithGoogle()">
-      <span>G</span> Continuar com Google
+      <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Continuar com Google
     </button>
 
     <p class="auth-toggle">
-      <span id="toggle-text">Nao tem conta?</span>
+      <span id="toggle-text">Não tem conta?</span>
       <a href="#" id="toggle-link" onclick="toggleAuthMode(event)">Criar conta</a>
     </p>
   </div>
@@ -63,7 +107,64 @@
 
 <!-- MAIN APP -->
 <div id="app-screen" class="screen">
-  <!-- TAB CONTENT -->
+
+  <!-- DESKTOP SIDEBAR (hidden on mobile) -->
+  <aside class="desktop-sidebar" id="desktop-sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-logo">
+        <img src="logo.png" alt="Rumo Agente" class="sidebar-logo-img">
+        <span class="sidebar-logo-text">Rumo Agente</span>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="sidebar-item active" data-tab="dashboard" onclick="switchTab('dashboard')">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>
+          <span>Dashboard</span>
+        </button>
+        <button class="sidebar-item" data-tab="screen" onclick="switchTab('screen')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          <span>Tela</span>
+        </button>
+        <button class="sidebar-item" data-tab="chat" onclick="switchTab('chat')">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+          <span>Chat</span>
+        </button>
+        <button class="sidebar-item" data-tab="apps" onclick="switchTab('apps')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Apps</span>
+        </button>
+        <button class="sidebar-item" data-tab="profile" onclick="switchTab('profile')">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+          <span>Perfil</span>
+        </button>
+      </nav>
+    </div>
+    <div class="sidebar-bottom">
+      <div class="sidebar-user">
+        <div class="sidebar-user-avatar" id="sidebar-avatar">U</div>
+        <div class="sidebar-user-info">
+          <span class="sidebar-user-name" id="sidebar-user-name">Usuario</span>
+          <span class="sidebar-user-plan" id="sidebar-user-plan">Plano Gratuito</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- DESKTOP TOP BAR (hidden on mobile) -->
+  <header class="desktop-topbar" id="desktop-topbar">
+    <h1 class="topbar-title" id="topbar-title">Dashboard</h1>
+    <div class="topbar-right">
+      <div class="topbar-credits">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14v-4H7l5-7v4h4l-5 7z"/></svg>
+        <span id="topbar-credits-count">10</span> creditos
+      </div>
+      <button class="topbar-notif" aria-label="Notificacoes">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+      </button>
+      <div class="topbar-avatar" id="topbar-avatar">U</div>
+    </div>
+  </header>
+
+  <div class="main-content-wrapper" id="main-content-wrapper">
   <div id="tab-content">
     <!-- DASHBOARD -->
     <div id="tab-dashboard" class="tab-panel active">
@@ -72,46 +173,67 @@
         <div class="header-section">
           <div>
             <h3 id="greeting">Ola, Produtor!</h3>
-            <p class="subtle" id="current-date"></p>
+            <p class="date-text" id="current-date"></p>
           </div>
           <div class="avatar" id="avatar-initial">U</div>
         </div>
 
         <div class="card agent-status-card">
-          <div class="agent-icon"><img src="logo.png" alt="Agente" style="width:36px;height:36px;border-radius:50%;"></div>
+          <div class="agent-icon"><img src="logo.png" alt="Agente" style="width:32px;height:32px;border-radius:50%;"></div>
           <div>
             <div class="agent-header">
               <span class="card-title">Agente</span>
-              <span class="status-badge" id="agent-status-badge">
+              <span class="status-badge online" id="agent-status-badge">
                 <span class="status-dot green"></span> Pronto
               </span>
             </div>
-            <p class="subtle small">Envie comandos pelo chat e o agente executa para voce</p>
+            <p class="subtle small">Envie comandos pelo chat e o agente executa para você</p>
           </div>
         </div>
 
         <div class="card credits-card">
           <div>
-            <p class="subtle">Creditos</p>
-            <div class="credits-value"><span id="credits-count">10</span> <small class="subtle">restantes</small></div>
+            <p class="credits-label">Créditos</p>
+            <div class="credits-value">
+              <span class="num" id="credits-count">10</span>
+              <span class="unit">restantes</span>
+            </div>
           </div>
           <div class="text-right">
-            <p class="subtle">Usados hoje</p>
+            <p class="credits-label">Usados hoje</p>
             <span class="credits-used" id="credits-used">0</span>
+          </div>
+          <div class="circular-progress" id="credits-progress">
+            <svg viewBox="0 0 52 52">
+              <circle class="bg" cx="26" cy="26" r="20"/>
+              <circle class="fg" cx="26" cy="26" r="20" stroke-dasharray="125.66" stroke-dashoffset="125.66"/>
+            </svg>
           </div>
         </div>
 
         <div class="quick-actions">
-          <button class="quick-btn" onclick="switchTab('screen')"><span>🖥️</span>Ver Tela</button>
-          <button class="quick-btn" onclick="switchTab('chat')"><span>💬</span>Chat</button>
-          <button class="quick-btn" onclick="switchTab('apps')"><span>📱</span>Apps</button>
-          <button class="quick-btn" onclick="switchTab('profile')"><span>👑</span>Planos</button>
+          <button class="quick-btn" onclick="switchTab('screen')">
+            <div class="q-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>
+            Ver Tela
+          </button>
+          <button class="quick-btn" onclick="switchTab('chat')">
+            <div class="q-icon green"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg></div>
+            Chat
+          </button>
+          <button class="quick-btn" onclick="switchTab('apps')">
+            <div class="q-icon orange"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg></div>
+            Apps
+          </button>
+          <button class="quick-btn" onclick="switchTab('profile')">
+            <div class="q-icon purple"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4v2h16V4zm1 10v-2l-1-5H4l-1 5v2h1v6h10v-6h4v6h2v-6h1zm-9 4H6v-4h6v4z"/></svg></div>
+            Planos
+          </button>
         </div>
 
         <h4 class="section-title">Tarefas Recentes</h4>
         <div id="tasks-list" class="tasks-list">
           <div class="empty-state">
-            <span>✅</span>
+            <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
             <p>Nenhuma tarefa</p>
             <p class="subtle small">Suas tarefas aparecerão aqui</p>
           </div>
@@ -128,17 +250,24 @@
             <span class="status-dot red"></span> Desconectado
           </span>
           <button class="btn-icon" id="disconnect-btn" style="display:none" onclick="disconnectScreen()">Desconectar</button>
-          <button class="btn-icon" onclick="toggleFullscreen()">⛶</button>
+          <button class="btn-fullscreen" onclick="toggleFullscreen()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          </button>
         </div>
       </div>
       <div class="screen-container" id="screen-container">
         <div id="screen-placeholder" class="screen-placeholder">
           <div class="pulse-circle"></div>
           <div class="pulse-circle inner"></div>
-          <span class="screen-icon">🖥️</span>
-          <h3>Computador na Nuvem</h3>
-          <p class="subtle">Conecte-se ao seu desktop remoto para controlar aplicativos.</p>
-          <button class="btn-primary" id="connect-btn" onclick="connectScreen()">▶ Conectar</button>
+          <div class="screen-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          </div>
+          <h3>Seu Computador na Nuvem</h3>
+          <p class="subtle">Desktop privado e isolado. Seus dados ficam seguros e separados.</p>
+          <button class="btn-primary" id="connect-btn" onclick="connectScreen()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>
+            Conectar
+          </button>
         </div>
         <img id="screen-image" class="screen-image" style="display:none" alt="Desktop Remoto">
       </div>
@@ -146,17 +275,29 @@
 
     <!-- CHAT -->
     <div id="tab-chat" class="tab-panel">
-      <div class="tab-header"><h2>Agente IA</h2></div>
-      <div class="app-selector" id="app-selector"></div>
-      <div class="chat-messages" id="chat-messages">
-        <div class="message assistant">
-          <div class="bubble">Ola! Sou o Rumo Agente. Como posso ajudar voce hoje?</div>
-          <span class="msg-time">Agora</span>
+      <div class="chat-area">
+        <div class="tab-header"><h2>Agente IA</h2></div>
+        <div class="app-selector" id="app-selector"></div>
+        <div class="chat-messages" id="chat-messages">
+          <div class="message assistant">
+            <div class="bubble">Olá! Sou o Rumo Agente. Como posso ajudar você hoje?</div>
+            <span class="msg-time">Agora</span>
+          </div>
+        </div>
+        <div class="chat-input-bar">
+          <input type="text" id="chat-input" placeholder="Digite um comando..." onkeydown="if(event.key==='Enter')sendChat()">
+          <button class="send-btn" id="send-btn" onclick="sendChat()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14v-4H7l5-7v4h4l-5 7z"/></svg>
+          </button>
         </div>
       </div>
-      <div class="chat-input-bar">
-        <input type="text" id="chat-input" placeholder="Digite um comando..." onkeydown="if(event.key==='Enter')sendChat()">
-        <button class="send-btn" id="send-btn" onclick="sendChat()">⬆</button>
+      <div class="split-screen" id="split-screen">
+        <div class="split-screen-inner">
+          <img id="split-screen-image" class="screen-image" alt="Desktop">
+          <div class="split-screen-overlay">
+            <span class="status-dot green"></span> Desktop Ativo
+          </div>
+        </div>
       </div>
     </div>
 
@@ -176,50 +317,97 @@
         <div class="profile-header">
           <div class="profile-avatar" id="profile-avatar">U</div>
           <h3 id="profile-name">Usuario</h3>
-          <p class="subtle" id="profile-email">email@exemplo.com</p>
+          <p class="subtle" id="profile-email" style="font-size:0.9rem;">email@exemplo.com</p>
         </div>
 
         <div class="card plan-card" onclick="showSubscription()">
-          <div class="plan-icon">👑</div>
+          <div class="plan-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/></svg>
+          </div>
           <div>
             <p class="card-title" id="plan-name">Plano Gratuito</p>
             <p class="subtle small" id="plan-credits">10 creditos restantes</p>
           </div>
-          <span class="chevron">›</span>
+          <span class="chevron">&rsaquo;</span>
         </div>
 
-        <h4 class="section-title">Configuracoes</h4>
-        <div class="settings-row"><span>🌐</span>Idioma<span class="subtle">Portugues</span><span class="chevron">›</span></div>
-        <div class="settings-row"><span>🔔</span>Notificacoes<span class="subtle">Ativadas</span><span class="chevron">›</span></div>
-        <div class="settings-row"><span>🎨</span>Aparencia<span class="subtle">Automatico</span><span class="chevron">›</span></div>
-        <div class="settings-row" onclick="window.open('/privacidade','_blank')" style="cursor:pointer"><span>🔒</span>Privacidade<span class="chevron">›</span></div>
+        <h4 class="section-title">Configurações</h4>
+        <div class="settings-row" onclick="settingsIdioma()">
+          <div class="s-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.92 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2 0 .68.06 1.34.14 2H4.26zM5.08 16h2.95c.32 1.25.78 2.45 1.38 3.56A7.987 7.987 0 0 1 5.08 16zm2.95-8H5.08a7.987 7.987 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2 0-.68.07-1.35.16-2h4.68c.09.65.16 1.32.16 2 0 .68-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 0 1-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2 0-.68-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg></div>
+          Idioma
+          <span class="s-value">Português</span>
+          <span class="s-chevron">&rsaquo;</span>
+        </div>
+        <div class="settings-row" onclick="settingsNotificacoes(this)">
+          <div class="s-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg></div>
+          Notificações
+          <span class="s-value" id="notif-value">Ativadas</span>
+          <span class="s-chevron">&rsaquo;</span>
+        </div>
+        <div class="settings-row" onclick="settingsAparencia(this)">
+          <div class="s-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 14c-1.66 0-3-1.34-3-3 0-1.31.84-2.41 2-2.83V4.5C6 3.12 7.12 2 8.5 2S11 3.12 11 4.5v3.67c1.16.42 2 1.52 2 2.83 0 1.66-1.34 3-3 3H7zm13-2c0-1.31-.84-2.41-2-2.83V4.5C18 3.12 16.88 2 15.5 2S13 3.12 13 4.5v4.67c-1.16.42-2 1.52-2 2.83h9z"/></svg></div>
+          Aparência
+          <span class="s-value" id="aparencia-value">Automático</span>
+          <span class="s-chevron">&rsaquo;</span>
+        </div>
+        <div class="settings-row" onclick="window.open('/privacidade.html','_blank')">
+          <div class="s-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg></div>
+          Privacidade
+          <span class="s-chevron" style="margin-left:auto">&rsaquo;</span>
+        </div>
 
         <h4 class="section-title">Suporte</h4>
-        <div class="settings-row"><span>❓</span>Central de Ajuda<span class="chevron">›</span></div>
-        <div class="settings-row"><span>✉️</span>Contato<span class="chevron">›</span></div>
-        <div class="settings-row" onclick="window.open('/termos','_blank')" style="cursor:pointer"><span>📄</span>Termos de Uso<span class="chevron">›</span></div>
+        <div class="settings-row" onclick="window.location.href='mailto:contato@rumoagente.com.br'">
+          <div class="s-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg></div>
+          Central de Ajuda
+          <span class="s-chevron" style="margin-left:auto">&rsaquo;</span>
+        </div>
+        <div class="settings-row" onclick="window.location.href='mailto:contato@rumoagente.com.br'">
+          <div class="s-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></div>
+          Contato
+          <span class="s-chevron" style="margin-left:auto">&rsaquo;</span>
+        </div>
+        <div class="settings-row" onclick="window.open('/termos.html','_blank')">
+          <div class="s-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg></div>
+          Termos de Uso
+          <span class="s-chevron" style="margin-left:auto">&rsaquo;</span>
+        </div>
 
-        <button class="btn-logout" onclick="logout()">🚪 Sair da Conta</button>
+        <button class="btn-logout" onclick="logout()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sair da Conta
+        </button>
+        <button class="btn-delete-account" onclick="deleteAccount()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+          Excluir Conta
+        </button>
       </div>
     </div>
   </div>
 
+  </div><!-- /.main-content-wrapper -->
+
   <!-- TAB BAR -->
   <nav class="tab-bar">
     <button class="tab-item active" data-tab="dashboard" onclick="switchTab('dashboard')">
-      <span>📊</span><label>Dashboard</label>
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>
+      <span class="tab-label">Home</span>
     </button>
     <button class="tab-item" data-tab="screen" onclick="switchTab('screen')">
-      <span>🖥️</span><label>Tela</label>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      <span class="tab-label">Tela</span>
     </button>
     <button class="tab-item" data-tab="chat" onclick="switchTab('chat')">
-      <span>💬</span><label>Chat</label>
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+      <span class="tab-label">Chat</span>
     </button>
     <button class="tab-item" data-tab="apps" onclick="switchTab('apps')">
-      <span>📱</span><label>Apps</label>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span class="tab-label">Apps</span>
     </button>
     <button class="tab-item" data-tab="profile" onclick="switchTab('profile')">
-      <span>👤</span><label>Perfil</label>
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+      <span class="tab-label">Perfil</span>
     </button>
   </nav>
 </div>
@@ -228,39 +416,40 @@
 <div id="subscription-modal" class="modal" style="display:none">
   <div class="modal-content">
     <div class="modal-header">
-      <h2>Planos e Creditos</h2>
-      <button onclick="closeSubscription()">✕</button>
+      <h2>Planos e Créditos</h2>
+      <button onclick="closeSubscription()">&times;</button>
     </div>
     <div class="modal-body">
-      <h4 class="section-title">Escolha seu Plano</h4>
+      <h4 class="section-title" style="margin-top:0">Escolha seu Plano</h4>
       <div class="plan-option" data-plan="free" onclick="selectPlan('free')">
-        <div><strong>Gratuito</strong><br><small class="subtle">10 creditos/mes</small></div>
+        <div><strong>Gratuito</strong><br><small class="subtle">10 créditos/mês</small></div>
         <div class="plan-price accent">Gratis</div>
       </div>
       <div class="plan-option" data-plan="starter" onclick="selectPlan('starter')">
-        <div><strong>Starter</strong><br><small class="subtle">100 creditos/mes</small></div>
+        <div><strong>Starter</strong><br><small class="subtle">100 créditos/mês</small></div>
         <div class="plan-price">R$ 49,90<small>/mes</small></div>
       </div>
       <div class="plan-option selected" data-plan="pro" onclick="selectPlan('pro')">
-        <div><strong>Pro</strong> <span class="badge-popular">POPULAR</span><br><small class="subtle">500 creditos/mes</small></div>
+        <div><strong>Pro</strong> <span class="badge-popular">POPULAR</span><br><small class="subtle">500 créditos/mês</small></div>
         <div class="plan-price">R$ 149,90<small>/mes</small></div>
       </div>
       <div class="plan-option" data-plan="enterprise" onclick="selectPlan('enterprise')">
-        <div><strong>Enterprise</strong><br><small class="subtle">2000 creditos/mes</small></div>
+        <div><strong>Enterprise</strong><br><small class="subtle">2000 créditos/mês</small></div>
         <div class="plan-price">R$ 499,90<small>/mes</small></div>
       </div>
-      <button class="btn-primary" id="subscribe-btn" onclick="subscribe()">Assinar Pro</button>
+      <button class="btn-primary" id="subscribe-btn" onclick="subscribe()" style="margin-top:12px;">Assinar Pro</button>
 
-      <h4 class="section-title">Creditos Extras</h4>
+      <h4 class="section-title">Créditos Extras</h4>
       <div class="credits-packs">
-        <div class="credit-pack" onclick="buyCredits(50)"><strong>+50</strong><small>creditos</small><span class="accent">R$ 19,90</span></div>
-        <div class="credit-pack" onclick="buyCredits(200)"><strong>+200</strong><small>creditos</small><span class="accent">R$ 59,90</span></div>
-        <div class="credit-pack" onclick="buyCredits(500)"><strong>+500</strong><small>creditos</small><span class="accent">R$ 119,90</span></div>
+        <div class="credit-pack" onclick="buyCredits(50)"><strong>+50</strong><small>créditos</small><span class="accent">R$ 19,90</span></div>
+        <div class="credit-pack" onclick="buyCredits(200)"><strong>+200</strong><small>créditos</small><span class="accent">R$ 59,90</span></div>
+        <div class="credit-pack" onclick="buyCredits(500)"><strong>+500</strong><small>créditos</small><span class="accent">R$ 119,90</span></div>
       </div>
     </div>
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

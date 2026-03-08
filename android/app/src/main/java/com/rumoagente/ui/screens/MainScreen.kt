@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.rumoagente.ui.theme.RumoAgenteTheme
@@ -77,11 +78,17 @@ fun MainScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            val context = LocalContext.current
             when (selectedTab) {
-                0 -> DashboardScreen()
+                0 -> DashboardScreen(
+                    onNavigateToChat = { selectedTab = 2 },
+                    onNavigateToScreen = { selectedTab = 1 },
+                    onNavigateToApps = { selectedTab = 3 },
+                    onNavigateToProfile = { selectedTab = 4 }
+                )
                 1 -> ScreenViewScreen()
                 2 -> ChatScreen()
-                3 -> AppsScreen()
+                3 -> AppsScreen(context = context)
                 4 -> ProfileScreen(
                     onNavigateToSubscription = onNavigateToSubscription,
                     onLogout = onLogout

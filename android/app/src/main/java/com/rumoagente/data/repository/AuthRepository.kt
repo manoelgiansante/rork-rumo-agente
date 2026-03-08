@@ -96,6 +96,21 @@ class AuthRepository(private val context: Context) {
         }
     }
 
+    suspend fun signInWithIdToken(idToken: String): Result<AuthTokenResponse> {
+        return try {
+            val response = api.signInWithIdToken(body = IdTokenRequest(idToken = idToken))
+            if (response.isSuccessful && response.body() != null) {
+                val tokenResponse = response.body()!!
+                saveSession(tokenResponse)
+                Result.success(tokenResponse)
+            } else {
+                Result.failure(Exception("Google sign-in failed: ${response.code()} ${response.errorBody()?.string()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun recoverPassword(email: String): Result<Unit> {
         return try {
             val response = api.recover(body = RecoverRequest(email))

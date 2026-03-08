@@ -1,5 +1,7 @@
 package com.rumoagente.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -14,13 +16,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.rumoagente.data.api.RetrofitInstance
 import com.rumoagente.ui.theme.RumoAgenteTheme
 import com.rumoagente.ui.theme.RumoColors
+import kotlinx.coroutines.launch
 
 data class PlanOption(
     val name: String,
@@ -29,13 +34,15 @@ data class PlanOption(
     val credits: String,
     val features: List<String>,
     val isPopular: Boolean = false,
-    val accentColor: Color = RumoColors.Accent
+    val accentColor: Color = RumoColors.Accent,
+    val planId: String = ""
 )
 
 data class CreditPack(
     val credits: Int,
     val price: String,
-    val perCredit: String
+    val perCredit: String,
+    val packId: String = ""
 )
 
 @Composable
@@ -43,6 +50,12 @@ fun SubscriptionScreen(
     onDismiss: () -> Unit = {}
 ) {
     var selectedPlanIndex by remember { mutableIntStateOf(1) }
+    var isLoading by remember { mutableStateOf(false) }
+    var loadingPackId by remember { mutableStateOf<String?>(null) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
     val plans = listOf(
         PlanOption(
@@ -51,7 +64,8 @@ fun SubscriptionScreen(
             period = "/mes",
             credits = "10 creditos/mes",
             features = listOf("Chat basico", "1 app", "Suporte comunidade"),
-            accentColor = RumoColors.SubtleText
+            accentColor = RumoColors.SubtleText,
+            planId = "free"
         ),
         PlanOption(
             name = "Starter",
@@ -60,7 +74,8 @@ fun SubscriptionScreen(
             credits = "50 creditos/mes",
             features = listOf("Chat avancado", "5 apps", "Visualizacao de tela", "Suporte email"),
             isPopular = true,
-            accentColor = RumoColors.Accent
+            accentColor = RumoColors.Accent,
+            planId = "starter"
         ),
         PlanOption(
             name = "Pro",
@@ -68,7 +83,8 @@ fun SubscriptionScreen(
             period = "/mes",
             credits = "200 creditos/mes",
             features = listOf("Tudo do Starter", "Apps ilimitados", "Controle remoto", "API access", "Suporte prioritario"),
-            accentColor = RumoColors.AccentBlue
+            accentColor = RumoColors.AccentBlue,
+            planId = "pro"
         ),
         PlanOption(
             name = "Enterprise",
@@ -76,15 +92,69 @@ fun SubscriptionScreen(
             period = "/mes",
             credits = "Creditos ilimitados",
             features = listOf("Tudo do Pro", "Multi-agente", "SLA dedicado", "Onboarding", "Suporte 24/7"),
-            accentColor = RumoColors.Purple
+            accentColor = RumoColors.Purple,
+            planId = "enterprise"
         )
     )
 
     val creditPacks = listOf(
-        CreditPack(50, "R\$ 29", "R\$ 0,58"),
-        CreditPack(200, "R\$ 99", "R\$ 0,50"),
-        CreditPack(500, "R\$ 199", "R\$ 0,40")
+        CreditPack(50, "R\$ 29", "R\$ 0,58", packId = "credits_50"),
+        CreditPack(200, "R\$ 99", "R\$ 0,50", packId = "credits_200"),
+        CreditPack(500, "R\$ 199", "R\$ 0,40", packId = "credits_500")
     )
+
+    fun handleSubscribe(plan: PlanOption) {
+        if (plan.planId == "free") return
+        val token = RetrofitInstance.authToken ?: return
+
+        isLoading = true
+        errorMessage = null
+        coroutineScope.launch {
+            try {
+                val response = RetrofitInstance.chatApi.createCheckout(
+                    authorization = "Bearer $token",
+                    body = mapOf("plan" to plan.planId)
+                )
+                isLoading = false
+                if (response.isSuccessful && response.body() != null) {
+                    val checkoutUrl = response.body()!!.url
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(checkoutUrl))
+                    context.startActivity(intent)
+                } else {
+                    errorMessage = "Erro ao criar checkout. Tente novamente."
+                }
+            } catch (e: Exception) {
+                isLoading = false
+                errorMessage = "Erro de conexao: ${e.localizedMessage ?: "Tente novamente."}"
+            }
+        }
+    }
+
+    fun handleBuyCredits(pack: CreditPack) {
+        val token = RetrofitInstance.authToken ?: return
+
+        loadingPackId = pack.packId
+        errorMessage = null
+        coroutineScope.launch {
+            try {
+                val response = RetrofitInstance.chatApi.buyCredits(
+                    authorization = "Bearer $token",
+                    body = mapOf("pack" to pack.packId, "credits" to pack.credits)
+                )
+                loadingPackId = null
+                if (response.isSuccessful && response.body() != null) {
+                    val checkoutUrl = response.body()!!.url
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(checkoutUrl))
+                    context.startActivity(intent)
+                } else {
+                    errorMessage = "Erro ao processar compra. Tente novamente."
+                }
+            } catch (e: Exception) {
+                loadingPackId = null
+                errorMessage = "Erro de conexao: ${e.localizedMessage ?: "Tente novamente."}"
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -142,6 +212,49 @@ fun SubscriptionScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        // Error message
+        if (errorMessage != null) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                shape = RoundedCornerShape(10.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = RumoColors.Red.copy(alpha = 0.12f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Error,
+                        contentDescription = null,
+                        tint = RumoColors.Red,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = errorMessage!!,
+                        color = RumoColors.Red,
+                        fontSize = 13.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(
+                        onClick = { errorMessage = null },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Fechar",
+                            tint = RumoColors.Red,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+        }
+
         // Plan cards
         plans.forEachIndexed { index, plan ->
             PlanCard(
@@ -156,7 +269,7 @@ fun SubscriptionScreen(
 
         // Subscribe button
         Button(
-            onClick = { /* TODO: handle subscription */ },
+            onClick = { handleSubscribe(plans[selectedPlanIndex]) },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
@@ -164,14 +277,31 @@ fun SubscriptionScreen(
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = plans[selectedPlanIndex].accentColor
-            )
+            ),
+            enabled = !isLoading && selectedPlanIndex != 0
         ) {
-            Text(
-                text = "Assinar ${plans[selectedPlanIndex].name}",
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 16.sp,
-                color = if (selectedPlanIndex == 0) Color.White else Color.Black
-            )
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(22.dp),
+                    color = if (selectedPlanIndex == 0) Color.White else Color.Black,
+                    strokeWidth = 2.dp
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = "Processando...",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 16.sp,
+                    color = if (selectedPlanIndex == 0) Color.White else Color.Black
+                )
+            } else {
+                Text(
+                    text = if (selectedPlanIndex == 0) "Plano atual"
+                    else "Assinar ${plans[selectedPlanIndex].name}",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 16.sp,
+                    color = if (selectedPlanIndex == 0) Color.White else Color.Black
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -209,6 +339,8 @@ fun SubscriptionScreen(
             creditPacks.forEach { pack ->
                 CreditPackCard(
                     pack = pack,
+                    isLoading = loadingPackId == pack.packId,
+                    onClick = { handleBuyCredits(pack) },
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -342,6 +474,8 @@ private fun PlanCard(
 @Composable
 private fun CreditPackCard(
     pack: CreditPack,
+    isLoading: Boolean = false,
+    onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -349,7 +483,8 @@ private fun CreditPackCard(
             .border(1.dp, RumoColors.CardBorder, RoundedCornerShape(12.dp)),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = RumoColors.CardBg),
-        onClick = { }
+        onClick = { if (!isLoading) onClick() },
+        enabled = !isLoading
     ) {
         Column(
             modifier = Modifier
@@ -357,29 +492,43 @@ private fun CreditPackCard(
                 .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "${pack.credits}",
-                color = RumoColors.AccentBlue,
-                fontWeight = FontWeight.Bold,
-                fontSize = 22.sp
-            )
-            Text(
-                text = "creditos",
-                color = RumoColors.SubtleText,
-                fontSize = 11.sp
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = pack.price,
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 15.sp
-            )
-            Text(
-                text = "${pack.perCredit}/un",
-                color = RumoColors.SubtleText,
-                fontSize = 10.sp
-            )
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(22.dp),
+                    color = RumoColors.AccentBlue,
+                    strokeWidth = 2.dp
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Processando...",
+                    color = RumoColors.SubtleText,
+                    fontSize = 10.sp
+                )
+            } else {
+                Text(
+                    text = "${pack.credits}",
+                    color = RumoColors.AccentBlue,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 22.sp
+                )
+                Text(
+                    text = "creditos",
+                    color = RumoColors.SubtleText,
+                    fontSize = 11.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = pack.price,
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 15.sp
+                )
+                Text(
+                    text = "${pack.perCredit}/un",
+                    color = RumoColors.SubtleText,
+                    fontSize = 10.sp
+                )
+            }
         }
     }
 }

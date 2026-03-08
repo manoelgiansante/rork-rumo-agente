@@ -1,10 +1,10 @@
 package com.rumoagente.ui.screens
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -23,10 +23,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -36,10 +35,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.GetCredentialResponse
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import com.rumoagente.data.api.Config
 import com.rumoagente.data.repository.AuthRepository
 import com.rumoagente.ui.theme.RumoAgenteTheme
 import com.rumoagente.ui.theme.RumoColors
-import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
 
 @Composable
@@ -49,6 +56,7 @@ fun AuthScreen(
     val context = LocalContext.current
     val authRepository = remember { AuthRepository(context) }
     val coroutineScope = rememberCoroutineScope()
+    val credentialManager = remember { CredentialManager.create(context) }
 
     var isLogin by remember { mutableStateOf(true) }
     var email by remember { mutableStateOf("") }
@@ -56,6 +64,7 @@ fun AuthScreen(
     var name by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
+    var isGoogleLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Column(
@@ -315,7 +324,7 @@ fun AuthScreen(
             colors = ButtonDefaults.buttonColors(
                 containerColor = RumoColors.Accent
             ),
-            enabled = !isLoading
+            enabled = !isLoading && !isGoogleLoading
         ) {
             if (isLoading) {
                 CircularProgressIndicator(
@@ -360,7 +369,48 @@ fun AuthScreen(
 
         // Google sign-in button
         OutlinedButton(
-            onClick = { /* TODO: Google sign-in */ },
+            onClick = {
+                errorMessage = null
+                isGoogleLoading = true
+
+                val googleIdOption = GetGoogleIdOption.Builder()
+                    .setFilterByAuthorizedAccounts(false)
+                    .setServerClientId(Config.GOOGLE_WEB_CLIENT_ID)
+                    .setAutoSelectEnabled(true)
+                    .build()
+
+                val request = GetCredentialRequest.Builder()
+                    .addCredentialOption(googleIdOption)
+                    .build()
+
+                coroutineScope.launch {
+                    try {
+                        val result: GetCredentialResponse = credentialManager.getCredential(
+                            request = request,
+                            context = context
+                        )
+                        handleGoogleSignInResult(
+                            result = result,
+                            authRepository = authRepository,
+                            onSuccess = {
+                                isGoogleLoading = false
+                                onAuthSuccess()
+                            },
+                            onError = { message ->
+                                isGoogleLoading = false
+                                errorMessage = message
+                            }
+                        )
+                    } catch (e: GetCredentialCancellationException) {
+                        isGoogleLoading = false
+                        // User cancelled, no error message needed
+                    } catch (e: Exception) {
+                        isGoogleLoading = false
+                        Log.e("AuthScreen", "Google sign-in failed", e)
+                        errorMessage = "Erro ao fazer login com Google: ${e.localizedMessage}"
+                    }
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
@@ -368,21 +418,30 @@ fun AuthScreen(
             colors = ButtonDefaults.outlinedButtonColors(
                 containerColor = Color.White
             ),
-            border = null
+            border = null,
+            enabled = !isLoading && !isGoogleLoading
         ) {
-            Text(
-                text = "G",
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                color = Color(0xFF4285F4),
-                modifier = Modifier.padding(end = 8.dp)
-            )
-            Text(
-                text = "Continuar com Google",
-                fontWeight = FontWeight.Medium,
-                fontSize = 15.sp,
-                color = Color.Black
-            )
+            if (isGoogleLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(22.dp),
+                    color = Color(0xFF4285F4),
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Text(
+                    text = "G",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = Color(0xFF4285F4),
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+                Text(
+                    text = "Continuar com Google",
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 15.sp,
+                    color = Color.Black
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -431,12 +490,51 @@ fun AuthScreen(
                 fontSize = 14.sp,
                 modifier = Modifier.clickable {
                     isLogin = !isLogin
+                    errorMessage = null
                     isLoading = false
                 }
             )
         }
 
         Spacer(modifier = Modifier.height(32.dp))
+    }
+}
+
+private suspend fun handleGoogleSignInResult(
+    result: GetCredentialResponse,
+    authRepository: AuthRepository,
+    onSuccess: () -> Unit,
+    onError: (String) -> Unit
+) {
+    val credential = result.credential
+
+    when (credential) {
+        is CustomCredential -> {
+            if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                try {
+                    val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                    val idToken = googleIdTokenCredential.idToken
+
+                    // Exchange Google ID token with Supabase
+                    val authResult = authRepository.signInWithIdToken(idToken)
+                    if (authResult.isSuccess) {
+                        onSuccess()
+                    } else {
+                        val errorMsg = authResult.exceptionOrNull()?.localizedMessage
+                            ?: "Erro ao autenticar com Supabase"
+                        onError(errorMsg)
+                    }
+                } catch (e: GoogleIdTokenParsingException) {
+                    Log.e("AuthScreen", "Google ID token parsing failed", e)
+                    onError("Erro ao processar credenciais do Google")
+                }
+            } else {
+                onError("Tipo de credencial inesperado")
+            }
+        }
+        else -> {
+            onError("Tipo de credencial inesperado")
+        }
     }
 }
 

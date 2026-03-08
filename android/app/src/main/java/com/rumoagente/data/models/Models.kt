@@ -148,6 +148,11 @@ data class RecoverRequest(
     val email: String
 )
 
+data class IdTokenRequest(
+    val provider: String = "google",
+    @SerializedName("id_token") val idToken: String
+)
+
 data class AuthTokenResponse(
     @SerializedName("access_token") val accessToken: String,
     @SerializedName("token_type") val tokenType: String,

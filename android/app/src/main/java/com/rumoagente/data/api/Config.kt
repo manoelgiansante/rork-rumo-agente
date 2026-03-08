@@ -6,4 +6,5 @@ object Config {
     const val STRIPE_PK = "pk_live_51SPmgmEa6xGSraYxUhsiEmYdJ1nnCcGgMdQanHyIkfQYeJh9wACn11YyPqQvR1gjdfNEjUKC6mbN8nLEHFXxdZNu0001um2OTO"
     const val AGENT_URL = "http://216.238.111.253"
     const val API_URL = "https://rork-rumo-agente.vercel.app/api"
+    const val GOOGLE_WEB_CLIENT_ID = "659275180000-ikts8m3ofk9poejbkps5o01vfnedg1b4.apps.googleusercontent.com"
 }
