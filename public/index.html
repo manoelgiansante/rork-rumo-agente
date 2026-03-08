@@ -19,24 +19,24 @@
     <div class="onboarding-slides" id="onboarding-slides">
       <div class="onboarding-slide active" data-slide="0">
         <div class="onboarding-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:64px;height:64px;color:var(--accent)"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:72px;height:72px;color:var(--accent);position:relative;z-index:1;filter:drop-shadow(0 0 20px rgba(52,211,153,0.3))"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
         </div>
-        <h2>Seu Computador na Nuvem</h2>
-        <p>Um desktop completo, privado e seguro rodando na nuvem. Acesse de qualquer lugar, a qualquer hora.</p>
+        <h2>Seu Computador<br>na Nuvem</h2>
+        <p>Controle um computador completo direto do seu celular. Instale apps, navegue e trabalhe — de qualquer lugar.</p>
       </div>
       <div class="onboarding-slide" data-slide="1">
         <div class="onboarding-icon">
-          <svg viewBox="0 0 24 24" fill="currentColor" style="width:64px;height:64px;color:var(--accent-blue)"><path d="M21.928 11.607c-.202-.488-.635-.605-.928-.633V8c0-1.103-.897-2-2-2h-6V4.61c.305-.274.5-.668.5-1.11a1.5 1.5 0 0 0-3 0c0 .442.195.836.5 1.11V6H5c-1.103 0-2 .897-2 2v2.997l-.082.006A1 1 0 0 0 1.99 12v2a1 1 0 0 0 1 1H3v5c0 1.103.897 2 2 2h14c1.103 0 2-.897 2-2v-5a1 1 0 0 0 1-1v-1.938a1.006 1.006 0 0 0-.072-.455zM5 20V8h14l.001 3.996L19 12v2l.001.005.001 5.995H5z"/><ellipse cx="8.5" cy="12" rx="1.5" ry="2"/><ellipse cx="15.5" cy="12" rx="1.5" ry="2"/><path d="M8 16h8v2H8z"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:72px;height:72px;color:var(--accent-blue);position:relative;z-index:1;filter:drop-shadow(0 0 20px rgba(59,130,246,0.3))"><path d="M12 2a4 4 0 0 0-4 4v1a4 4 0 0 0 8 0V6a4 4 0 0 0-4-4z"/><path d="M20 21v-2a4 4 0 0 0-3-3.87M4 21v-2a4 4 0 0 1 3-3.87"/><circle cx="12" cy="17" r="1"/><path d="M9 17h6"/><path d="M12 14v3"/><path d="M15.5 6.5l2 2M8.5 6.5l-2 2"/></svg>
         </div>
-        <h2>Agente IA Inteligente</h2>
-        <p>Um assistente que controla o computador por você. Basta pedir e ele executa: abre sistemas, preenche planilhas, pesquisa dados.</p>
+        <h2>Agente IA<br>Inteligente</h2>
+        <p>Dê comandos por chat e o agente executa no computador. Sem precisar de secretária — a IA faz por você.</p>
       </div>
       <div class="onboarding-slide" data-slide="2">
         <div class="onboarding-icon">
-          <svg viewBox="0 0 24 24" fill="currentColor" style="width:64px;height:64px;color:var(--accent-orange)"><path d="M12 22c4.97 0 9-2.69 9-6V8c0-3.31-4.03-6-9-6S3 4.69 3 8v8c0 3.31 4.03 6 9 6zM12 4c3.86 0 7 1.79 7 4s-3.14 4-7 4-7-1.79-7-4 3.14-4 7-4z"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:72px;height:72px;color:#22C55E;position:relative;z-index:1;filter:drop-shadow(0 0 20px rgba(34,197,94,0.3))"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
         </div>
-        <h2>Feito para o Agronegócio</h2>
-        <p>Acesse Aegro, Ponta do S, Conta Azul e outros sistemas agro. O agente conhece o seu dia a dia no campo.</p>
+        <h2>Feito para o<br>Agronegócio</h2>
+        <p>Ponta do S, Rumo Máquinas, Aegro e muito mais. O agente domina os softwares da sua fazenda.</p>
       </div>
     </div>
     <div class="onboarding-dots" id="onboarding-dots">
@@ -45,7 +45,7 @@
       <span class="dot"></span>
     </div>
     <button class="btn-primary onboarding-btn" id="onboarding-btn" onclick="nextOnboarding()">Próximo</button>
-    <button class="btn-link onboarding-skip" onclick="skipOnboarding()">Pular</button>
+    <button class="btn-link onboarding-skip" id="onboarding-skip" onclick="skipOnboarding()">Pular</button>
   </div>
 </div>
 
@@ -289,7 +289,7 @@
         <div class="chat-input-bar">
           <input type="text" id="chat-input" placeholder="Digite um comando..." onkeydown="if(event.key==='Enter')sendChat()">
           <button class="send-btn" id="send-btn" onclick="sendChat()">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14v-4H7l5-7v4h4l-5 7z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 16V8M8 12l4-4 4 4" fill="none" stroke="var(--dark-bg)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
         </div>
       </div>
@@ -450,6 +450,9 @@
     </div>
   </div>
 </div>
+
+<!-- TOAST NOTIFICATION -->
+<div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="app.js"></script>

@@ -23,11 +23,11 @@ document.addEventListener('DOMContentLoaded', () => {
   if (authToken) {
     checkSession();
   } else if (!localStorage.getItem('has_onboarded')) {
-    // Show onboarding for first-time visitors
     document.getElementById('auth-screen').classList.remove('active');
     document.getElementById('onboarding-screen').classList.add('active');
   }
   setDate();
+  initHapticButtons();
 });
 
 function nextOnboarding() {
@@ -41,16 +41,30 @@ function nextOnboarding() {
 
 function skipOnboarding() {
   localStorage.setItem('has_onboarded', 'true');
-  document.getElementById('onboarding-screen').classList.remove('active');
-  document.getElementById('auth-screen').classList.add('active');
+  const onb = document.getElementById('onboarding-screen');
+  onb.style.opacity = '0';
+  onb.style.transition = 'opacity 0.35s ease';
+  setTimeout(() => {
+    onb.classList.remove('active');
+    onb.style.opacity = '';
+    onb.style.transition = '';
+    const auth = document.getElementById('auth-screen');
+    auth.classList.add('active');
+    auth.style.animation = 'slideUpFade 0.5s cubic-bezier(0.16,1,0.3,1)';
+  }, 300);
 }
 
 function updateOnboarding() {
   document.querySelectorAll('.onboarding-slide').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.onboarding-dots .dot').forEach(d => d.classList.remove('active'));
-  document.querySelector('.onboarding-slide[data-slide="' + onboardingStep + '"]').classList.add('active');
+  const nextSlide = document.querySelector('.onboarding-slide[data-slide="' + onboardingStep + '"]');
+  nextSlide.classList.add('active');
+  nextSlide.style.animation = 'slideUpFade 0.5s cubic-bezier(0.16,1,0.3,1)';
   document.querySelectorAll('.onboarding-dots .dot')[onboardingStep].classList.add('active');
-  document.getElementById('onboarding-btn').textContent = onboardingStep === 2 ? 'Começar' : 'Próximo';
+  const btn = document.getElementById('onboarding-btn');
+  btn.textContent = onboardingStep === 2 ? 'Começar' : 'Próximo';
+  const skipBtn = document.getElementById('onboarding-skip');
+  if (skipBtn) skipBtn.style.display = onboardingStep === 2 ? 'none' : 'block';
 }
 
 function setDate() {
@@ -299,8 +313,19 @@ function updateUI() {
 
 function showApp() {
   document.getElementById('onboarding-screen').classList.remove('active');
-  document.getElementById('auth-screen').classList.remove('active');
-  document.getElementById('app-screen').classList.add('active');
+  const auth = document.getElementById('auth-screen');
+  auth.style.opacity = '0';
+  auth.style.transform = 'scale(0.97)';
+  auth.style.transition = 'all 0.35s ease';
+  setTimeout(() => {
+    auth.classList.remove('active');
+    auth.style.opacity = '';
+    auth.style.transform = '';
+    auth.style.transition = '';
+    const app = document.getElementById('app-screen');
+    app.classList.add('active');
+    app.style.animation = 'slideUpFade 0.5s cubic-bezier(0.16,1,0.3,1)';
+  }, 300);
 }
 
 function logout(skipConfirm) {
@@ -327,36 +352,38 @@ const tabTitles = {
 };
 
 function switchTab(name) {
-  // Stop split-screen fetching when leaving chat
   if (splitScreenInterval) { clearInterval(splitScreenInterval); splitScreenInterval = null; }
 
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  const currentPanel = document.querySelector('.tab-panel.active');
   document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
 
-  // Update bottom tab bar (mobile)
+  const nextPanel = document.getElementById('tab-' + name);
+  if (currentPanel && currentPanel !== nextPanel) {
+    currentPanel.classList.remove('active');
+  }
+  nextPanel.classList.add('active');
+
   const mobileTab = document.querySelector('.tab-item[data-tab="' + name + '"]');
   if (mobileTab) mobileTab.classList.add('active');
 
-  // Update sidebar (desktop)
   const sidebarTab = document.querySelector('.sidebar-item[data-tab="' + name + '"]');
   if (sidebarTab) sidebarTab.classList.add('active');
 
-  // Update topbar title
   const topbarTitle = document.getElementById('topbar-title');
   if (topbarTitle) topbarTitle.textContent = tabTitles[name] || name;
 
   if (name === 'chat') {
     const input = document.getElementById('chat-input');
-    setTimeout(() => input.focus(), 100);
+    setTimeout(() => input.focus(), 150);
     scrollChat();
-    // Start split-screen screenshot fetching on desktop
     if (window.innerWidth >= 1024) {
       fetchSplitScreenshot();
       splitScreenInterval = setInterval(fetchSplitScreenshot, 2000);
     }
   }
+
+  triggerHaptic();
 }
 
 async function fetchSplitScreenshot() {
@@ -761,10 +788,20 @@ function selectChatApp(name) {
 let selectedPlan = 'pro';
 
 function showSubscription() {
-  document.getElementById('subscription-modal').style.display = 'flex';
+  const modal = document.getElementById('subscription-modal');
+  modal.style.display = 'flex';
+  requestAnimationFrame(() => { modal.style.opacity = '1'; });
 }
 function closeSubscription() {
-  document.getElementById('subscription-modal').style.display = 'none';
+  const modal = document.getElementById('subscription-modal');
+  const content = modal.querySelector('.modal-content');
+  content.style.transform = 'translateY(100%)';
+  modal.style.opacity = '0';
+  setTimeout(() => {
+    modal.style.display = 'none';
+    content.style.transform = '';
+    modal.style.opacity = '';
+  }, 350);
 }
 
 function selectPlan(plan) {
@@ -847,7 +884,7 @@ async function deleteAccount() {
 
 // ============ SETTINGS ============
 function settingsIdioma() {
-  alert('Apenas Português disponível no momento.');
+  showToast('Apenas Português disponível no momento');
 }
 
 function settingsNotificacoes(row) {
@@ -884,4 +921,76 @@ document.addEventListener('DOMContentLoaded', () => {
     const el = document.getElementById('aparencia-value');
     if (el) el.textContent = savedAparencia;
   }
+});
+
+// ============ TOAST NOTIFICATIONS ============
+function showToast(message, duration) {
+  duration = duration || 2500;
+  const toast = document.getElementById('toast');
+  if (!toast) return;
+  toast.textContent = message;
+  toast.classList.add('show');
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => {
+    toast.classList.remove('show');
+  }, duration);
+}
+
+// ============ HAPTIC FEEDBACK (vibration API) ============
+function triggerHaptic() {
+  if (navigator.vibrate) navigator.vibrate(8);
+}
+
+// ============ BUTTON PRESS ANIMATIONS ============
+function initHapticButtons() {
+  document.querySelectorAll('.quick-btn, .app-card, .settings-row, .plan-card, .credit-pack, .plan-option').forEach(function(el) {
+    el.addEventListener('touchstart', function() {
+      this.style.transform = 'scale(0.97)';
+      this.style.transition = 'transform 0.1s ease';
+    }, { passive: true });
+    el.addEventListener('touchend', function() {
+      this.style.transform = '';
+      this.style.transition = 'transform 0.3s cubic-bezier(0.16,1,0.3,1)';
+    }, { passive: true });
+  });
+}
+
+// ============ INTERSECTION OBSERVER FOR ANIMATIONS ============
+document.addEventListener('DOMContentLoaded', () => {
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('animate-in');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.card, .quick-actions, .section-title, .settings-row, .profile-header, .plan-card').forEach(el => {
+      observer.observe(el);
+    });
+  }
+});
+
+// ============ SWIPE GESTURES FOR ONBOARDING ============
+document.addEventListener('DOMContentLoaded', () => {
+  const slides = document.getElementById('onboarding-slides');
+  if (!slides) return;
+  let touchStartX = 0;
+  let touchEndX = 0;
+  slides.addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
+  slides.addEventListener('touchend', (e) => {
+    touchEndX = e.changedTouches[0].screenX;
+    const diff = touchStartX - touchEndX;
+    if (Math.abs(diff) > 60) {
+      if (diff > 0 && onboardingStep < 2) {
+        onboardingStep++;
+        updateOnboarding();
+      } else if (diff < 0 && onboardingStep > 0) {
+        onboardingStep--;
+        updateOnboarding();
+      }
+    }
+  }, { passive: true });
 });

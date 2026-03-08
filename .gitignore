@@ -34,3 +34,5 @@ node_modules
 .expo
 .vercel
 .env*.local
+
+android/
