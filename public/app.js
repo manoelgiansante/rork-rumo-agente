@@ -637,6 +637,13 @@ async function sendChat() {
     }
 
     cursor.remove();
+
+    // Check if message needs confirmation (like iOS)
+    const finalText = streamContent.textContent || streamContent.innerText || '';
+    if (isConfirmationMessage(finalText)) {
+      appendConfirmationButtons(div);
+    }
+
     if (currentUser) {
       currentUser.credits = Math.max(0, currentUser.credits - 1);
       document.getElementById('credits-count').textContent = currentUser?.credits || 0;
@@ -648,6 +655,41 @@ async function sendChat() {
     streamContent.textContent = 'Erro de conexão. Verifique sua internet.';
     cursor.remove();
   }
+}
+
+function isConfirmationMessage(text) {
+  const lower = text.toLowerCase();
+  const confirmPatterns = [
+    'deseja confirmar', 'deseja continuar', 'posso continuar',
+    'posso prosseguir', 'confirma?', 'confirmar?',
+    'quer que eu', 'devo prosseguir', 'devo continuar',
+    'pode confirmar', 'gostaria de confirmar', 'está correto',
+    'deseja prosseguir', 'posso executar', 'devo executar'
+  ];
+  return confirmPatterns.some(p => lower.includes(p));
+}
+
+function appendConfirmationButtons(messageDiv) {
+  const bubble = messageDiv.querySelector('.bubble');
+  if (!bubble) return;
+  const actions = document.createElement('div');
+  actions.className = 'confirmation-actions';
+  actions.innerHTML = '<button class="confirm-btn" onclick="handleConfirmAction(this, true)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Confirmar</button>' +
+    '<button class="cancel-btn" onclick="handleConfirmAction(this, false)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Cancelar</button>';
+  bubble.after(actions);
+}
+
+function handleConfirmAction(btn, confirmed) {
+  const actionsDiv = btn.closest('.confirmation-actions');
+  if (actionsDiv) {
+    actionsDiv.innerHTML = '<span style="font-size:0.8rem;color:var(--subtle);font-weight:500;">' +
+      (confirmed ? '✅ Confirmado' : '❌ Cancelado') + '</span>';
+  }
+  // Send confirmation to chat
+  const text = confirmed ? 'Sim, pode continuar.' : 'Não, cancele a operação.';
+  const input = document.getElementById('chat-input');
+  input.value = text;
+  sendChat();
 }
 
 // Disable send button when input is empty
@@ -662,7 +704,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-function addMessage(role, content) {
+function addMessage(role, content, opts) {
+  opts = opts || {};
   const container = document.getElementById('chat-messages');
   const time = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
   const div = document.createElement('div');
@@ -675,6 +718,11 @@ function addMessage(role, content) {
   }
   div.innerHTML = '<div class="bubble">' + rendered + '</div><span class="msg-time">' + time + '</span>';
   container.appendChild(div);
+
+  if (role === 'assistant' && isConfirmationMessage(content)) {
+    appendConfirmationButtons(div);
+  }
+
   scrollChat();
 }
 
@@ -727,9 +775,18 @@ async function loadApps() {
   renderCategoryFilter();
 }
 
+function filterApps() {
+  renderApps();
+}
+
 function renderApps() {
   const grid = document.getElementById('apps-grid');
-  const filtered = selectedCategory ? apps.filter(a => a.category === selectedCategory) : apps;
+  const searchInput = document.getElementById('apps-search');
+  const searchText = searchInput ? searchInput.value.trim().toLowerCase() : '';
+  let filtered = selectedCategory ? apps.filter(a => a.category === selectedCategory) : apps;
+  if (searchText) {
+    filtered = filtered.filter(a => a.name.toLowerCase().includes(searchText));
+  }
 
   const icons = {
     'Agronegocio':'🌿','Agronegócio':'🌿',
@@ -798,6 +855,30 @@ function showSubscription() {
   const modal = document.getElementById('subscription-modal');
   modal.style.display = 'flex';
   requestAnimationFrame(() => { modal.style.opacity = '1'; });
+  updateUsageOverview();
+  updateFeaturesForPlan(selectedPlan);
+}
+
+function updateUsageOverview() {
+  if (!currentUser) return;
+  const maxCredits = { free: 10, starter: 100, pro: 500, enterprise: 2000 }[currentUser.plan] || 10;
+  const el = document.getElementById('usage-current');
+  const totalEl = document.getElementById('usage-total');
+  const bar = document.getElementById('usage-bar');
+  if (el) el.textContent = currentUser.credits;
+  if (totalEl) totalEl.textContent = '/ ' + maxCredits;
+  if (bar) bar.style.width = Math.min((currentUser.credits / maxCredits) * 100, 100) + '%';
+}
+
+function updateFeaturesForPlan(plan) {
+  const streaming = document.querySelector('#feature-streaming .feature-check');
+  const support = document.querySelector('#feature-support .feature-check');
+  const dedicated = document.querySelector('#feature-dedicated .feature-check');
+  if (streaming) streaming.classList.toggle('included', plan !== 'free');
+  if (support) support.classList.toggle('included', plan === 'pro' || plan === 'enterprise');
+  if (dedicated) dedicated.classList.toggle('included', plan === 'enterprise');
+  // First 3 always included
+  document.querySelectorAll('.feature-row:nth-child(-n+3) .feature-check').forEach(el => el.classList.add('included'));
 }
 function closeSubscription() {
   const modal = document.getElementById('subscription-modal');
@@ -819,6 +900,7 @@ function selectPlan(plan) {
   const names = { free:'Gratuito', starter:'Starter', pro:'Pro', enterprise:'Enterprise' };
   document.getElementById('subscribe-btn').textContent = plan === 'free' ? 'Plano atual' : 'Assinar ' + names[plan];
   document.getElementById('subscribe-btn').disabled = plan === 'free';
+  updateFeaturesForPlan(plan);
 }
 
 async function subscribe() {
