@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SubscriptionView: View {
     let supabase: SupabaseService
+    var isSheet: Bool = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @State private var selectedPlan: SubscriptionPlan = .pro
@@ -11,31 +12,45 @@ struct SubscriptionView: View {
     @State private var showTransactions = false
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    usageOverview
-                    plansSection
-                    extraCreditsSection
-                    featuresComparison
-                    transactionHistorySection
+        Group {
+            if isSheet {
+                NavigationStack {
+                    subscriptionContent
+                        .toolbar {
+                            ToolbarItem(placement: .topBarLeading) {
+                                Button { dismiss() } label: {
+                                    Image(systemName: "chevron.left")
+                                        .font(.body.weight(.medium))
+                                        .foregroundStyle(Theme.accent)
+                                }
+                            }
+                        }
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 32)
-            }
-            .background(Theme.darkBg)
-            .navigationTitle("Planos e Créditos")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Fechar") { dismiss() }
-                }
-            }
-            .task {
-                transactions = await supabase.fetchTransactions()
+            } else {
+                subscriptionContent
             }
         }
         .preferredColorScheme(.dark)
+    }
+
+    private var subscriptionContent: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                usageOverview
+                plansSection
+                extraCreditsSection
+                featuresComparison
+                transactionHistorySection
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 32)
+        }
+        .background(Theme.darkBg)
+        .navigationTitle("Planos e Créditos")
+        .navigationBarTitleDisplayMode(.inline)
+        .task {
+            transactions = await supabase.fetchTransactions()
+        }
     }
 
     private var usageOverview: some View {

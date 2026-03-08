@@ -229,7 +229,10 @@ class SupabaseService {
 
     func signInWithGoogleOAuth() async throws -> URL {
         let redirectURL = "app.rork.rumoagente://login-callback"
-        let urlString = "\(baseURL)/auth/v1/authorize?provider=google&redirect_to=\(redirectURL)"
+        guard let encodedRedirect = redirectURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+            throw ServiceError.networkError
+        }
+        let urlString = "\(baseURL)/auth/v1/authorize?provider=google&redirect_to=\(encodedRedirect)"
         guard let url = URL(string: urlString) else {
             throw ServiceError.networkError
         }

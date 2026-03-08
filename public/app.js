@@ -1,8 +1,8 @@
 // Config
 const SUPABASE_URL = 'https://jxcnfyeemdltdfqtgbcl.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4Y25meWVlbWRsdGRmcXRnYmNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg1MDQwNTksImV4cCI6MjA4NDA4MDA1OX0.MEqgaUHb0cDVoDrXY6rc1F6YJLxzbpNiks-SFRCg2go';
-const AGENT_URL = window.location.origin;
-const API_URL = window.location.origin;
+const AGENT_URL = 'https://vps.agrorumo.com';
+const API_URL = 'https://vps.agrorumo.com';
 
 // State
 let authToken = localStorage.getItem('auth_token');

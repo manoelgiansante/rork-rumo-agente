@@ -45,7 +45,7 @@ struct DashboardView: View {
                 TaskDetailSheet(task: task)
             }
             .sheet(isPresented: $showSubscription) {
-                SubscriptionView(supabase: supabase)
+                SubscriptionView(supabase: supabase, isSheet: true)
             }
             .overlay {
                 if viewModel.isLoading && viewModel.recentTasks.isEmpty && !animateCards {
@@ -404,9 +404,13 @@ struct TaskDetailSheet: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button { dismiss() } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.title3)
-                            .foregroundStyle(Theme.subtleText)
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .font(.body.weight(.medium))
+                            Text("Voltar")
+                                .font(.body)
+                        }
+                        .foregroundStyle(Theme.accent)
                     }
                 }
             }

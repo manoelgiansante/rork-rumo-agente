@@ -2,13 +2,10 @@ import SwiftUI
 
 struct ProfileView: View {
     let supabase: SupabaseService
-    @State private var showSubscription = false
     @State private var showLogoutAlert = false
     @State private var showDeleteAlert = false
     @State private var isDeletingAccount = false
     @State private var deleteError: String?
-    @State private var showLanguagePicker = false
-    @State private var showNotificationSettings = false
     @AppStorage("app_language") private var appLanguage: String = "pt"
     @AppStorage("notifications_tasks") private var notifyTasks: Bool = true
     @AppStorage("notifications_credits") private var notifyCredits: Bool = true
@@ -34,17 +31,6 @@ struct ProfileView: View {
                 }
             }
             .navigationTitle("Perfil")
-            .sheet(isPresented: $showSubscription) {
-                SubscriptionView(supabase: supabase)
-            }
-            .sheet(isPresented: $showLanguagePicker) {
-                LanguagePickerSheet(selectedLanguage: $appLanguage)
-                    .presentationDetents([.medium])
-            }
-            .sheet(isPresented: $showNotificationSettings) {
-                NotificationSettingsSheet(notifyTasks: $notifyTasks, notifyCredits: $notifyCredits)
-                    .presentationDetents([.medium])
-            }
             .alert("Sair da conta?", isPresented: $showLogoutAlert) {
                 Button("Cancelar", role: .cancel) {}
                 Button("Sair", role: .destructive) { supabase.signOut() }
@@ -102,7 +88,9 @@ struct ProfileView: View {
     }
 
     private var planCard: some View {
-        Button { showSubscription = true } label: {
+        NavigationLink {
+            SubscriptionView(supabase: supabase)
+        } label: {
             HStack(spacing: 14) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12)
@@ -155,11 +143,15 @@ struct ProfileView: View {
         VStack(spacing: 0) {
             SectionHeader(title: "Configurações")
 
-            Button { showLanguagePicker = true } label: {
+            NavigationLink {
+                LanguagePickerView(selectedLanguage: $appLanguage)
+            } label: {
                 SettingsRowContent(icon: "globe", title: "Idioma", value: languageDisplayName)
             }
 
-            Button { showNotificationSettings = true } label: {
+            NavigationLink {
+                NotificationSettingsView(notifyTasks: $notifyTasks, notifyCredits: $notifyCredits)
+            } label: {
                 SettingsRowContent(icon: "bell.fill", title: "Notificações", value: notifyTasks ? "Ativadas" : "Desativadas")
             }
 
@@ -289,7 +281,7 @@ struct SectionHeader: View {
     }
 }
 
-struct LanguagePickerSheet: View {
+struct LanguagePickerView: View {
     @Binding var selectedLanguage: String
     @Environment(\.dismiss) private var dismiss
 
@@ -300,71 +292,56 @@ struct LanguagePickerSheet: View {
     ]
 
     var body: some View {
-        NavigationStack {
-            List {
-                ForEach(languages, id: \.code) { lang in
-                    Button {
-                        selectedLanguage = lang.code
-                        dismiss()
-                    } label: {
-                        HStack(spacing: 14) {
-                            Text(lang.flag)
-                                .font(.title2)
-                            Text(lang.name)
-                                .font(.body)
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            if selectedLanguage == lang.code {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundStyle(Theme.accent)
-                            }
+        List {
+            ForEach(languages, id: \.code) { lang in
+                Button {
+                    selectedLanguage = lang.code
+                    dismiss()
+                } label: {
+                    HStack(spacing: 14) {
+                        Text(lang.flag)
+                            .font(.title2)
+                        Text(lang.name)
+                            .font(.body)
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        if selectedLanguage == lang.code {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(Theme.accent)
                         }
-                        .padding(.vertical, 4)
                     }
-                }
-            }
-            .navigationTitle("Idioma")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Fechar") { dismiss() }
+                    .padding(.vertical, 4)
                 }
             }
         }
+        .navigationTitle("Idioma")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
-struct NotificationSettingsSheet: View {
+struct NotificationSettingsView: View {
     @Binding var notifyTasks: Bool
     @Binding var notifyCredits: Bool
-    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    Toggle(isOn: $notifyTasks) {
-                        Label("Tarefas Concluídas", systemImage: "checkmark.circle.fill")
-                    }
-                    .tint(Theme.accent)
+        List {
+            Section {
+                Toggle(isOn: $notifyTasks) {
+                    Label("Tarefas Concluídas", systemImage: "checkmark.circle.fill")
+                }
+                .tint(Theme.accent)
 
-                    Toggle(isOn: $notifyCredits) {
-                        Label("Créditos Baixos", systemImage: "exclamationmark.triangle.fill")
-                    }
-                    .tint(Theme.accent)
-                } header: {
-                    Text("Notificações")
-                } footer: {
-                    Text("Receba alertas quando tarefas forem concluídas ou quando seus créditos estiverem acabando.")
+                Toggle(isOn: $notifyCredits) {
+                    Label("Créditos Baixos", systemImage: "exclamationmark.triangle.fill")
                 }
-            }
-            .navigationTitle("Notificações")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Fechar") { dismiss() }
-                }
+                .tint(Theme.accent)
+            } header: {
+                Text("Notificações")
+            } footer: {
+                Text("Receba alertas quando tarefas forem concluídas ou quando seus créditos estiverem acabando.")
             }
         }
+        .navigationTitle("Notificações")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }

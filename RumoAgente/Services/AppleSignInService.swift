@@ -1,6 +1,7 @@
 import AuthenticationServices
 import CryptoKit
 import Foundation
+import UIKit
 
 @Observable
 @MainActor
@@ -22,6 +23,7 @@ class AppleSignInService: NSObject {
                 continuation.resume(with: result)
             }
             controller.delegate = self
+            controller.presentationContextProvider = self
             controller.performRequests()
         }
     }
@@ -73,6 +75,18 @@ extension AppleSignInService: ASAuthorizationControllerDelegate {
         Task { @MainActor in
             completion?(.failure(error))
             completion = nil
+        }
+    }
+}
+
+extension AppleSignInService: ASAuthorizationControllerPresentationContextProviding {
+    nonisolated func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        MainActor.assumeIsolated {
+            guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                  let window = scene.windows.first else {
+                return ASPresentationAnchor()
+            }
+            return window
         }
     }
 }
