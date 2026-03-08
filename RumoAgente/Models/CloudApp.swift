@@ -15,6 +15,25 @@ nonisolated struct CloudApp: Codable, Identifiable, Sendable, Hashable {
         case isSelected = "is_selected"
     }
 
+    init(id: String, name: String, iconName: String, status: AppStatus, category: AppCategory, isSelected: Bool = false) {
+        self.id = id
+        self.name = name
+        self.iconName = iconName
+        self.status = status
+        self.category = category
+        self.isSelected = isSelected
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        iconName = try container.decodeIfPresent(String.self, forKey: .iconName) ?? "app.fill"
+        status = try container.decodeIfPresent(AppStatus.self, forKey: .status) ?? .installed
+        category = try container.decodeIfPresent(AppCategory.self, forKey: .category) ?? .other
+        isSelected = try container.decodeIfPresent(Bool.self, forKey: .isSelected) ?? false
+    }
+
     nonisolated func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }

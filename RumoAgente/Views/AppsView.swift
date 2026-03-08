@@ -20,6 +20,16 @@ struct AppsView: View {
                     }
                     .padding(.bottom, 24)
                 }
+                .refreshable {
+                    await appsViewModel.loadApps()
+                }
+                .overlay {
+                    if appsViewModel.isLoading && appsViewModel.apps.isEmpty {
+                        ProgressView()
+                            .tint(Theme.accent)
+                            .scaleEffect(1.2)
+                    }
+                }
             }
             .navigationTitle("Apps")
             .searchable(text: $searchText, prompt: "Buscar aplicativos...")
@@ -65,14 +75,25 @@ struct AppsView: View {
             $0.name.localizedStandardContains(searchText)
         }
 
-        return LazyVGrid(columns: columns, spacing: 12) {
-            ForEach(filtered) { app in
-                AppCard(app: app) {
-                    appsViewModel.selectApp(app)
+        return Group {
+            if filtered.isEmpty && !appsViewModel.isLoading {
+                ContentUnavailableView(
+                    searchText.isEmpty ? "Nenhum app encontrado" : "Sem resultados",
+                    systemImage: searchText.isEmpty ? "square.grid.2x2" : "magnifyingglass",
+                    description: Text(searchText.isEmpty ? "Os aplicativos aparecerão aqui" : "Nenhum app corresponde a \"\(searchText)\"")
+                )
+                .frame(minHeight: 200)
+            } else {
+                LazyVGrid(columns: columns, spacing: 12) {
+                    ForEach(filtered) { app in
+                        AppCard(app: app) {
+                            appsViewModel.selectApp(app)
+                        }
+                    }
                 }
+                .padding(.horizontal, 16)
             }
         }
-        .padding(.horizontal, 16)
     }
 }
 

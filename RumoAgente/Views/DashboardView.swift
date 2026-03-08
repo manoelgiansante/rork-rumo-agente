@@ -7,6 +7,7 @@ struct DashboardView: View {
     @State private var viewModel: DashboardViewModel
     @State private var animateCards = false
     @State private var selectedTask: AgentTask?
+    @State private var showSubscription = false
 
     init(supabase: SupabaseService, agentService: AgentService, selectedTab: Binding<Int>) {
         self.supabase = supabase
@@ -42,6 +43,16 @@ struct DashboardView: View {
             }
             .sheet(item: $selectedTask) { task in
                 TaskDetailSheet(task: task)
+            }
+            .sheet(isPresented: $showSubscription) {
+                SubscriptionView(supabase: supabase)
+            }
+            .overlay {
+                if viewModel.isLoading && viewModel.recentTasks.isEmpty && !animateCards {
+                    ProgressView()
+                        .tint(Theme.accent)
+                        .scaleEffect(1.2)
+                }
             }
         }
         .preferredColorScheme(.dark)
@@ -183,7 +194,7 @@ struct DashboardView: View {
                 selectedTab = 3
             }
             QuickActionButton(icon: "creditcard.fill", title: "Planos", color: .purple) {
-                selectedTab = 4
+                showSubscription = true
             }
         }
         .opacity(animateCards ? 1 : 0)

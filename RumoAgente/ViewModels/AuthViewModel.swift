@@ -22,9 +22,18 @@ class AuthViewModel {
         self.supabase = supabase
     }
 
+    private func isValidEmail(_ email: String) -> Bool {
+        let pattern = #"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"#
+        return email.range(of: pattern, options: .regularExpression) != nil
+    }
+
     func signIn() async {
         guard !email.isEmpty, !password.isEmpty else {
             errorMessage = "Preencha todos os campos."
+            return
+        }
+        guard isValidEmail(email) else {
+            errorMessage = "Digite um email válido."
             return
         }
         isLoading = true
@@ -40,6 +49,10 @@ class AuthViewModel {
     func signUp() async {
         guard !email.isEmpty, !password.isEmpty, !displayName.isEmpty else {
             errorMessage = "Preencha todos os campos."
+            return
+        }
+        guard isValidEmail(email) else {
+            errorMessage = "Digite um email válido."
             return
         }
         guard password.count >= 6 else {

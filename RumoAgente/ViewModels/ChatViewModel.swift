@@ -32,6 +32,7 @@ class ChatViewModel {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
 
+        let historySnapshot = messages
         let userMessage = ChatMessage(role: .user, content: text, createdAt: Date())
         messages.append(userMessage)
         inputText = ""
@@ -42,7 +43,7 @@ class ChatViewModel {
             let response = try await claudeService.sendCommand(
                 message: text,
                 appContext: selectedApp?.name,
-                conversationHistory: messages,
+                conversationHistory: historySnapshot,
                 authToken: supabase.authTokenValue
             )
             messages.append(response)
