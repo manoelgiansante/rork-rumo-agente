@@ -6,7 +6,7 @@ struct ScreenView: View {
     @State private var isFullScreen = false
     @State private var screenImage: UIImage?
     @State private var isLoading = false
-    @State private var refreshTimer: Timer?
+    @State private var isRefreshing = false
     @State private var errorMessage: String?
 
     private let backendURL = Config.EXPO_PUBLIC_AGENT_BACKEND_URL
@@ -52,7 +52,9 @@ struct ScreenView: View {
             .statusBarHidden(isFullScreen)
         }
         .preferredColorScheme(.dark)
-        .onDisappear { stopRefreshing() }
+        .onDisappear {
+            isRefreshing = false
+        }
     }
 
     private var connectionStatusBar: some View {
@@ -113,7 +115,8 @@ struct ScreenView: View {
             do {
                 // Check user's desktop status
                 guard let statusURL = URL(string: "\(backendURL)/desktop/status") else {
-                    await MainActor.run { errorMessage = "URL inválida"; isLoading = false }
+                    errorMessage = "URL inválida"
+                    isLoading = false
                     return
                 }
 
@@ -122,7 +125,8 @@ struct ScreenView: View {
 
                 let (statusData, statusResponse) = try await URLSession.shared.data(for: statusReq)
                 guard let httpResponse = statusResponse as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-                    await MainActor.run { errorMessage = "Servidor offline"; isLoading = false }
+                    errorMessage = "Servidor offline"
+                    isLoading = false
                     return
                 }
 
@@ -138,8 +142,8 @@ struct ScreenView: View {
 
                     let (startData, startResponse) = try await URLSession.shared.data(for: startReq)
                     guard let startHttp = startResponse as? HTTPURLResponse, startHttp.statusCode == 200 else {
-                        let errorBody = String(data: startData, encoding: .utf8) ?? "Erro"
-                        await MainActor.run { errorMessage = errorBody; isLoading = false }
+                        errorMessage = String(data: startData, encoding: .utf8) ?? "Erro"
+                        isLoading = false
                         return
                     }
 
@@ -149,24 +153,19 @@ struct ScreenView: View {
 
                 await fetchScreenshot(token: token)
 
-                await MainActor.run {
-                    isConnected = true
-                    isLoading = false
-                    startRefreshing(token: token)
-                }
+                isConnected = true
+                isLoading = false
+                startRefreshing(token: token)
             } catch {
-                await MainActor.run {
-                    errorMessage = "Sem conexão"
-                    isLoading = false
-                }
+                errorMessage = "Sem conexão"
+                isLoading = false
             }
         }
     }
 
     private func disconnect() {
-        stopRefreshing()
+        isRefreshing = false
 
-        // Stop user's desktop container
         if let token = supabase.authTokenValue {
             Task {
                 var req = URLRequest(url: URL(string: "\(backendURL)/stop-desktop")!)
@@ -180,15 +179,13 @@ struct ScreenView: View {
         screenImage = nil
     }
 
-    private func stopRefreshing() {
-        refreshTimer?.invalidate()
-        refreshTimer = nil
-    }
-
     private func startRefreshing(token: String) {
-        refreshTimer?.invalidate()
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { _ in
-            Task { await fetchScreenshot(token: token) }
+        isRefreshing = true
+        Task {
+            while isRefreshing {
+                await fetchScreenshot(token: token)
+                try? await Task.sleep(for: .seconds(1.5))
+            }
         }
     }
 
@@ -202,7 +199,7 @@ struct ScreenView: View {
             guard let httpResponse = response as? HTTPURLResponse,
                   httpResponse.statusCode == 200,
                   let image = UIImage(data: data) else { return }
-            await MainActor.run { self.screenImage = image }
+            screenImage = image
         } catch {}
     }
 }

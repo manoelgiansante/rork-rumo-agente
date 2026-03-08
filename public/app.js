@@ -1,8 +1,8 @@
 // Config
 const SUPABASE_URL = 'https://jxcnfyeemdltdfqtgbcl.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4Y25meWVlbWRsdGRmcXRnYmNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg1MDQwNTksImV4cCI6MjA4NDA4MDA1OX0.MEqgaUHb0cDVoDrXY6rc1F6YJLxzbpNiks-SFRCg2go';
-const AGENT_URL = 'https://vps.agrorumo.com';
-const API_URL = 'https://vps.agrorumo.com';
+const AGENT_URL = window.location.origin;
+const API_URL = window.location.origin;
 
 // State
 let authToken = localStorage.getItem('auth_token');
@@ -23,11 +23,18 @@ let deferredInstallPrompt = null;
 
 // Init
 document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    const splash = document.getElementById('splash-screen');
+    if (splash) splash.classList.add('hidden');
+  }, 1200);
+
   if (authToken) {
     checkSession();
   } else if (!localStorage.getItem('has_onboarded')) {
     document.getElementById('auth-screen').classList.remove('active');
     document.getElementById('onboarding-screen').classList.add('active');
+  } else {
+    document.getElementById('auth-screen').classList.add('active');
   }
   setDate();
   initHapticButtons();
@@ -48,6 +55,8 @@ function nextOnboarding() {
 
 function skipOnboarding() {
   localStorage.setItem('has_onboarded', 'true');
+  const splash = document.getElementById('splash-screen');
+  if (splash) splash.classList.add('hidden');
   const onb = document.getElementById('onboarding-screen');
   onb.style.opacity = '0';
   onb.style.transition = 'opacity 0.35s ease';
@@ -319,6 +328,8 @@ function updateUI() {
 }
 
 function showApp() {
+  const splash = document.getElementById('splash-screen');
+  if (splash) splash.classList.add('hidden');
   document.getElementById('onboarding-screen').classList.remove('active');
   const auth = document.getElementById('auth-screen');
   auth.style.opacity = '0';
@@ -951,23 +962,24 @@ function incrementCreditsUsed() {
 
 // ============ DELETE ACCOUNT ============
 async function deleteAccount() {
-  if (!confirm('Tem certeza? Esta ação é irreversível e todos os seus dados serão excluídos.')) return;
+  if (!confirm('Tem certeza? Esta ação é irreversível e todos os seus dados serão excluídos permanentemente.')) return;
   try {
-    // Mark user for deletion via profile update
-    await fetch(SUPABASE_URL + '/rest/v1/profiles?user_id=eq.' + currentUser.id, {
-      method: 'PATCH',
+    const res = await fetch('https://rork-rumo-agente.vercel.app/api/delete-account', {
+      method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': 'Bearer ' + authToken,
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({ deleted_at: new Date().toISOString() })
+        'Authorization': 'Bearer ' + authToken
+      }
     });
-    alert('Sua conta foi marcada para exclusão. Seus dados serão removidos em até 30 dias.');
-    logout(true);
+    if (res.ok) {
+      showSnackbar('Conta excluída com sucesso.', null, null);
+      logout(true);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert('Erro ao excluir conta: ' + (data.error || 'Tente novamente.'));
+    }
   } catch (e) {
-    alert('Erro ao excluir conta. Tente novamente ou entre em contato com contato@rumoagente.com.br');
+    alert('Erro ao excluir conta. Verifique sua conexão e tente novamente.');
   }
 }
 

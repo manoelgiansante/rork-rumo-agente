@@ -31,6 +31,9 @@ struct DashboardView: View {
             .background(Theme.darkBg)
             .navigationTitle("Dashboard")
             .navigationBarTitleDisplayMode(.large)
+            .refreshable {
+                await viewModel.loadDashboard()
+            }
             .task {
                 await viewModel.loadDashboard()
                 withAnimation(.spring(response: 0.6)) {
