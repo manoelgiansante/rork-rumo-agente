@@ -5,7 +5,7 @@ struct RumoAgenteApp: App {
     @State private var supabase = SupabaseService()
     @State private var claudeService = ClaudeService()
     @State private var agentService = AgentService()
-    @AppStorage("hasOnboarded") private var hasOnboarded = false
+    @AppStorage("hasOnboarded") private var hasOnboarded: Bool = false
 
     var body: some Scene {
         WindowGroup {
@@ -22,7 +22,7 @@ struct RumoAgenteApp: App {
             .animation(.snappy, value: supabase.isAuthenticated)
             .task {
                 await supabase.checkSession()
-                agentService.configure(baseURL: "http://216.238.111.253")
+                agentService.configure(baseURL: Config.EXPO_PUBLIC_AGENT_BACKEND_URL)
             }
             .onOpenURL { url in
                 Task {
