@@ -35,4 +35,11 @@ node_modules
 .vercel
 .env*.local
 
-android/
+
+# Android build artifacts (keep source code)
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.apk
+*.aab
