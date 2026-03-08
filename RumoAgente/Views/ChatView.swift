@@ -18,6 +18,29 @@ struct ChatView: View {
                 VStack(spacing: 0) {
                     appSelectorBar
                     Divider().foregroundStyle(Theme.cardBorder)
+
+                    if let error = viewModel.errorMessage {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.caption)
+                            Text(error)
+                                .font(.caption)
+                                .lineLimit(2)
+                            Spacer()
+                            Button {
+                                viewModel.errorMessage = nil
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .font(.caption2)
+                            }
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(.red.opacity(0.8))
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                    }
+
                     messagesScrollView
                     inputBar
                 }

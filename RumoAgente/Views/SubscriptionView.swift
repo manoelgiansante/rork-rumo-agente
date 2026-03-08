@@ -307,7 +307,7 @@ struct PlanCard: View {
                                 .background(Color.orange.opacity(0.15), in: .capsule)
                         }
                     }
-                    Text(plan.description)
+                    Text(plan.planDescription)
                         .font(.caption)
                         .foregroundStyle(Theme.subtleText)
                     Text("\(plan.includedCredits) créditos/mês")

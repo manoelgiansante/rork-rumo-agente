@@ -51,7 +51,7 @@ nonisolated enum SubscriptionPlan: String, Codable, Sendable, CaseIterable {
         }
     }
 
-    var description: String {
+    var planDescription: String {
         switch self {
         case .free: "Teste o agente com 10 créditos"
         case .starter: "Ideal para pequenos produtores"

@@ -54,9 +54,19 @@ class SupabaseService {
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-            let errorBody = String(data: data, encoding: .utf8) ?? "Erro desconhecido"
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch {
+            throw ServiceError.networkError
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw ServiceError.invalidResponse
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            let errorBody = parseSupabaseError(data) ?? "Erro ao criar conta"
             throw ServiceError.authError(errorBody)
         }
 
@@ -78,9 +88,19 @@ class SupabaseService {
         let body: [String: String] = ["email": email, "password": password]
         request.httpBody = try JSONEncoder().encode(body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-            let errorBody = String(data: data, encoding: .utf8) ?? "Erro desconhecido"
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch {
+            throw ServiceError.networkError
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw ServiceError.invalidResponse
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            let errorBody = parseSupabaseError(data) ?? "Email ou senha incorretos"
             throw ServiceError.authError(errorBody)
         }
 
@@ -145,10 +165,13 @@ class SupabaseService {
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-                signOut()
+            guard let httpResponse = response as? HTTPURLResponse else { return }
+
+            if httpResponse.statusCode == 401 {
                 return
             }
+
+            guard httpResponse.statusCode == 200 else { return }
 
             let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
             guard let userId = json?["id"] as? String,
@@ -169,7 +192,7 @@ class SupabaseService {
             isAuthenticated = true
             await fetchProfile()
         } catch {
-            signOut()
+            // Network error — don't sign out, keep existing session
         }
     }
 
@@ -349,8 +372,15 @@ class SupabaseService {
         request.httpMethod = "DELETE"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.timeoutInterval = 30
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch {
+            throw ServiceError.networkError
+        }
+
         guard let httpResponse = response as? HTTPURLResponse,
               (200...299).contains(httpResponse.statusCode) else {
             let errorBody = String(data: data, encoding: .utf8) ?? "Erro desconhecido"
@@ -401,6 +431,14 @@ class SupabaseService {
             return []
         }
     }
+
+    private func parseSupabaseError(_ data: Data) -> String? {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        if let msg = json["msg"] as? String { return msg }
+        if let msg = json["error_description"] as? String { return msg }
+        if let msg = json["message"] as? String { return msg }
+        return nil
+    }
 }
 
 nonisolated enum ServiceError: LocalizedError, Sendable {
@@ -412,7 +450,7 @@ nonisolated enum ServiceError: LocalizedError, Sendable {
 
     nonisolated var errorDescription: String? {
         switch self {
-        case .authError(let msg): "Erro de autenticação: \(msg)"
+        case .authError(let msg): msg
         case .networkError: "Erro de conexão. Verifique sua internet."
         case .invalidResponse: "Resposta inválida do servidor."
         case .insufficientCredits: "Créditos insuficientes."

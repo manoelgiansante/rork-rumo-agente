@@ -47,6 +47,18 @@ class ChatViewModel {
                 authToken: supabase.authTokenValue
             )
             messages.append(response)
+        } catch let error as ServiceError {
+            errorMessage = error.localizedDescription
+            let errorText: String
+            switch error {
+            case .networkError:
+                errorText = "Sem conexão com a internet. Verifique sua rede e tente novamente."
+            case .authError:
+                errorText = "Sessão expirada. Faça login novamente."
+            default:
+                errorText = "Desculpe, ocorreu um erro ao processar seu comando. Tente novamente."
+            }
+            messages.append(ChatMessage(role: .assistant, content: errorText, createdAt: Date()))
         } catch {
             errorMessage = error.localizedDescription
             messages.append(ChatMessage(

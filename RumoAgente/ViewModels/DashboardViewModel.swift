@@ -16,8 +16,11 @@ class DashboardViewModel {
         self.agentService = agentService
     }
 
+    var errorMessage: String?
+
     func loadDashboard() async {
         isLoading = true
+        errorMessage = nil
 
         async let statusCheck = agentService.checkStatus()
         async let tasksLoad = supabase.fetchTasks()
