@@ -1,0 +1,55 @@
+{
+  "name": "Rumo Agente",
+  "short_name": "Rumo Agente",
+  "description": "Seu computador na nuvem com agente IA inteligente para o agronegócio",
+  "start_url": "/?source=pwa",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0D1117",
+  "theme_color": "#0D1117",
+  "categories": ["productivity", "business"],
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "scope": "/",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Chat com Agente",
+      "short_name": "Chat",
+      "description": "Envie comandos para o agente IA",
+      "url": "/?tab=chat",
+      "icons": [{ "src": "/logo.png", "sizes": "512x512" }]
+    },
+    {
+      "name": "Ver Tela",
+      "short_name": "Tela",
+      "description": "Veja seu computador na nuvem",
+      "url": "/?tab=screen",
+      "icons": [{ "src": "/logo.png", "sizes": "512x512" }]
+    },
+    {
+      "name": "Apps",
+      "short_name": "Apps",
+      "description": "Gerencie seus aplicativos",
+      "url": "/?tab=apps",
+      "icons": [{ "src": "/logo.png", "sizes": "512x512" }]
+    }
+  ],
+  "screenshots": [],
+  "related_applications": [],
+  "handle_links": "preferred"
+}

@@ -18,6 +18,9 @@ let refreshInterval = null;
 
 let onboardingStep = 0;
 
+// PWA Install
+let deferredInstallPrompt = null;
+
 // Init
 document.addEventListener('DOMContentLoaded', () => {
   if (authToken) {
@@ -28,6 +31,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   setDate();
   initHapticButtons();
+  registerServiceWorker();
+  initOfflineDetection();
+  initPWAInstall();
+  handleDeepLink();
 });
 
 function nextOnboarding() {
@@ -994,3 +1001,173 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }, { passive: true });
 });
+
+// ============ SERVICE WORKER REGISTRATION ============
+function registerServiceWorker() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').then((reg) => {
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        if (!newWorker) return;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            showUpdateBanner();
+          }
+        });
+      });
+    }).catch(() => {});
+  }
+}
+
+function showUpdateBanner() {
+  let banner = document.getElementById('update-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'update-banner';
+    banner.className = 'update-banner';
+    banner.innerHTML = '<span>Nova versão disponível!</span><button onclick="applyUpdate()">Atualizar</button>';
+    document.body.appendChild(banner);
+  }
+  requestAnimationFrame(() => banner.classList.add('show'));
+}
+
+function applyUpdate() {
+  if (navigator.serviceWorker.controller) {
+    navigator.serviceWorker.ready.then((reg) => {
+      if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    });
+  }
+  window.location.reload();
+}
+
+// ============ PWA INSTALL ============
+function initPWAInstall() {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+
+    if (!localStorage.getItem('install_banner_dismissed')) {
+      setTimeout(() => showInstallBanner(), 3000);
+    }
+
+    const pwaBanner = document.getElementById('pwa-install-banner');
+    if (pwaBanner) pwaBanner.style.display = 'block';
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null;
+    hideInstallBanner();
+    showSnackbar('App instalado com sucesso!', 'Abrir', () => {});
+    const pwaBanner = document.getElementById('pwa-install-banner');
+    if (pwaBanner) pwaBanner.style.display = 'none';
+  });
+
+  if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+    const pwaBanner = document.getElementById('pwa-install-banner');
+    if (pwaBanner) pwaBanner.style.display = 'none';
+  }
+}
+
+function showInstallBanner() {
+  const banner = document.getElementById('android-install-banner');
+  if (banner && deferredInstallPrompt) {
+    banner.classList.add('show');
+  }
+}
+
+function hideInstallBanner() {
+  const banner = document.getElementById('android-install-banner');
+  if (banner) banner.classList.remove('show');
+}
+
+function dismissInstallBanner() {
+  hideInstallBanner();
+  localStorage.setItem('install_banner_dismissed', 'true');
+}
+
+function installPWA() {
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    deferredInstallPrompt.userChoice.then((choice) => {
+      if (choice.outcome === 'accepted') {
+        hideInstallBanner();
+      }
+      deferredInstallPrompt = null;
+    });
+  } else {
+    showToast('Abra no Chrome e toque em "Adicionar à tela inicial"');
+  }
+}
+
+// ============ OFFLINE DETECTION ============
+function initOfflineDetection() {
+  const offlineBar = document.getElementById('offline-bar');
+  if (!offlineBar) return;
+
+  function updateOnlineStatus() {
+    if (!navigator.onLine) {
+      offlineBar.classList.add('show');
+      document.body.style.paddingTop = '32px';
+    } else {
+      offlineBar.classList.remove('show');
+      document.body.style.paddingTop = '';
+    }
+  }
+
+  window.addEventListener('online', () => {
+    updateOnlineStatus();
+    showSnackbar('Conexão restaurada', null, null);
+  });
+  window.addEventListener('offline', updateOnlineStatus);
+  updateOnlineStatus();
+}
+
+// ============ SNACKBAR (ANDROID-STYLE) ============
+function showSnackbar(message, actionText, actionCallback) {
+  const snackbar = document.getElementById('snackbar');
+  if (!snackbar) return;
+
+  let html = '<span>' + escapeHtml(message) + '</span>';
+  if (actionText && actionCallback) {
+    html += '<button class="snackbar-action" id="snackbar-action-btn">' + escapeHtml(actionText) + '</button>';
+  }
+  snackbar.innerHTML = html;
+  snackbar.classList.add('show');
+
+  if (actionCallback) {
+    const btn = document.getElementById('snackbar-action-btn');
+    if (btn) btn.addEventListener('click', () => { actionCallback(); snackbar.classList.remove('show'); });
+  }
+
+  clearTimeout(snackbar._timer);
+  snackbar._timer = setTimeout(() => snackbar.classList.remove('show'), 4000);
+}
+
+// ============ DEEP LINK HANDLING ============
+function handleDeepLink() {
+  const params = new URLSearchParams(window.location.search);
+  const tab = params.get('tab');
+  if (tab && ['dashboard', 'screen', 'chat', 'apps', 'profile'].includes(tab)) {
+    const waitForApp = setInterval(() => {
+      if (document.getElementById('app-screen').classList.contains('active')) {
+        switchTab(tab);
+        clearInterval(waitForApp);
+      }
+    }, 200);
+    setTimeout(() => clearInterval(waitForApp), 10000);
+  }
+}
+
+// ============ ANDROID BACK BUTTON ============
+window.addEventListener('popstate', (e) => {
+  const activePanel = document.querySelector('.tab-panel.active');
+  if (activePanel && activePanel.id !== 'tab-dashboard') {
+    e.preventDefault();
+    switchTab('dashboard');
+    history.pushState(null, '', window.location.pathname);
+  }
+});
+
+if (window.matchMedia('(display-mode: standalone)').matches) {
+  history.pushState(null, '', window.location.pathname);
+}
