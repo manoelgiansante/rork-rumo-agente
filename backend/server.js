@@ -447,8 +447,8 @@ app.post('/create-checkout', authenticateUser, async (req, res) => {
         },
         quantity: 1,
       }],
-      success_url: 'https://agente.agrorumo.com/#success',
-      cancel_url: 'https://agente.agrorumo.com/#cancel',
+      success_url: 'https://vps.agrorumo.com/#success',
+      cancel_url: 'https://vps.agrorumo.com/#cancel',
     });
 
     res.json({ url: session.url, sessionId: session.id });
@@ -484,8 +484,8 @@ app.post('/buy-credits', authenticateUser, async (req, res) => {
         },
         quantity: 1,
       }],
-      success_url: 'https://agente.agrorumo.com/#success',
-      cancel_url: 'https://agente.agrorumo.com/#cancel',
+      success_url: 'https://vps.agrorumo.com/#success',
+      cancel_url: 'https://vps.agrorumo.com/#cancel',
     });
 
     res.json({ url: session.url });
