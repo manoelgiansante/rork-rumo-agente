@@ -179,7 +179,7 @@
         </div>
 
         <div class="dashboard-cards-row">
-        <div class="card agent-status-card">
+        <div class="card agent-status-card animate-in">
           <div class="agent-icon"><img src="logo.png" alt="Agente" style="width:32px;height:32px;border-radius:50%;"></div>
           <div>
             <div class="agent-header">
@@ -192,7 +192,7 @@
           </div>
         </div>
 
-        <div class="card credits-card">
+        <div class="card credits-card animate-in">
           <div>
             <p class="credits-label">Créditos</p>
             <div class="credits-value">
@@ -213,7 +213,7 @@
         </div>
         </div><!-- /.dashboard-cards-row -->
 
-        <div class="quick-actions">
+        <div class="quick-actions animate-in">
           <button class="quick-btn" onclick="switchTab('screen')">
             <div class="q-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>
             Ver Tela
@@ -232,8 +232,8 @@
           </button>
         </div>
 
-        <h4 class="section-title">Tarefas Recentes</h4>
-        <div id="tasks-list" class="tasks-list">
+        <h4 class="section-title animate-in">Tarefas Recentes</h4>
+        <div id="tasks-list" class="tasks-list animate-in">
           <div class="empty-state">
             <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
             <p>Nenhuma tarefa</p>
@@ -316,13 +316,13 @@
     <div id="tab-profile" class="tab-panel">
       <div class="tab-header"><h2>Perfil</h2></div>
       <div class="tab-body">
-        <div class="profile-header">
+        <div class="profile-header animate-in">
           <div class="profile-avatar" id="profile-avatar">U</div>
           <h3 id="profile-name">Usuario</h3>
           <p class="subtle" id="profile-email" style="font-size:0.9rem;">email@exemplo.com</p>
         </div>
 
-        <div class="card plan-card" onclick="showSubscription()">
+        <div class="card plan-card animate-in" onclick="showSubscription()">
           <div class="plan-icon">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/></svg>
           </div>
@@ -333,8 +333,8 @@
           <span class="chevron">&rsaquo;</span>
         </div>
 
-        <h4 class="section-title">Configurações</h4>
-        <div class="settings-row" onclick="settingsIdioma()">
+        <h4 class="section-title animate-in">Configurações</h4>
+        <div class="settings-row animate-in" onclick="settingsIdioma()">
           <div class="s-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.92 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2 0 .68.06 1.34.14 2H4.26zM5.08 16h2.95c.32 1.25.78 2.45 1.38 3.56A7.987 7.987 0 0 1 5.08 16zm2.95-8H5.08a7.987 7.987 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2 0-.68.07-1.35.16-2h4.68c.09.65.16 1.32.16 2 0 .68-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 0 1-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2 0-.68-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg></div>
           Idioma
           <span class="s-value">Português</span>
@@ -358,7 +358,7 @@
           <span class="s-chevron" style="margin-left:auto">&rsaquo;</span>
         </div>
 
-        <h4 class="section-title">Suporte</h4>
+        <h4 class="section-title animate-in">Suporte</h4>
         <div class="settings-row" onclick="window.location.href='mailto:contato@rumoagente.com.br'">
           <div class="s-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg></div>
           Central de Ajuda
