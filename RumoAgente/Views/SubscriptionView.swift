@@ -7,6 +7,8 @@ struct SubscriptionView: View {
     @State private var selectedPlan: SubscriptionPlan = .pro
     @State private var isProcessing = false
     @State private var checkoutError: String?
+    @State private var transactions: [Transaction] = []
+    @State private var showTransactions = false
 
     var body: some View {
         NavigationStack {
@@ -16,6 +18,7 @@ struct SubscriptionView: View {
                     plansSection
                     extraCreditsSection
                     featuresComparison
+                    transactionHistorySection
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 32)
@@ -27,6 +30,9 @@ struct SubscriptionView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Fechar") { dismiss() }
                 }
+            }
+            .task {
+                transactions = await supabase.fetchTransactions()
             }
         }
         .preferredColorScheme(.dark)
@@ -151,6 +157,46 @@ struct SubscriptionView: View {
         }
     }
 
+    private var transactionHistorySection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Button {
+                withAnimation(.snappy) { showTransactions.toggle() }
+            } label: {
+                HStack {
+                    Text("Histórico de Transações")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                    Spacer()
+                    Image(systemName: showTransactions ? "chevron.up" : "chevron.down")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.subtleText)
+                }
+            }
+
+            if showTransactions {
+                if transactions.isEmpty {
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 8) {
+                            Image(systemName: "doc.text.magnifyingglass")
+                                .font(.title2)
+                                .foregroundStyle(Theme.subtleText)
+                            Text("Nenhuma transação ainda")
+                                .font(.subheadline)
+                                .foregroundStyle(Theme.subtleText)
+                        }
+                        .padding(.vertical, 24)
+                        Spacer()
+                    }
+                } else {
+                    ForEach(transactions) { transaction in
+                        TransactionRow(transaction: transaction)
+                    }
+                }
+            }
+        }
+    }
+
     private func featureRow(icon: String, text: String, included: Bool) -> some View {
         HStack(spacing: 12) {
             Image(systemName: included ? "checkmark.circle.fill" : "xmark.circle")
@@ -171,6 +217,61 @@ struct SubscriptionView: View {
     private func buyCredits(amount: Int) async {
         guard let webURL = URL(string: "https://rork-rumo-agente.vercel.app/#subscription") else { return }
         openURL(webURL)
+    }
+}
+
+struct TransactionRow: View {
+    let transaction: Transaction
+
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(iconColor.opacity(0.12))
+                    .frame(width: 40, height: 40)
+                Image(systemName: transaction.type.iconName)
+                    .font(.body)
+                    .foregroundStyle(iconColor)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(transaction.type.displayName)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.white)
+                Text(transaction.createdAt, format: .dateTime.day().month().hour().minute())
+                    .font(.caption)
+                    .foregroundStyle(Theme.subtleText)
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 4) {
+                if transaction.amount != 0 {
+                    Text(transaction.amount > 0 ? "+R$ \(transaction.amount, specifier: "%.2f")" : "R$ \(transaction.amount, specifier: "%.2f")")
+                        .font(.subheadline.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(transaction.amount > 0 ? .green : Theme.subtleText)
+                }
+                if transaction.credits != 0 {
+                    Text(transaction.credits > 0 ? "+\(transaction.credits) cr" : "\(transaction.credits) cr")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(transaction.credits > 0 ? Theme.accent : .orange)
+                }
+            }
+        }
+        .padding(14)
+        .background(Theme.cardBg, in: .rect(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14).stroke(Theme.cardBorder, lineWidth: 1)
+        )
+    }
+
+    private var iconColor: Color {
+        switch transaction.type {
+        case .subscription: Theme.accentBlue
+        case .creditPurchase: .green
+        case .creditUsage: .orange
+        case .refund: .purple
+        }
     }
 }
 

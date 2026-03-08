@@ -8,6 +8,10 @@ struct ScreenView: View {
     @State private var isLoading = false
     @State private var isRefreshing = false
     @State private var errorMessage: String?
+    @State private var zoomScale: CGFloat = 1.0
+    @State private var lastZoomScale: CGFloat = 1.0
+    @State private var offset: CGSize = .zero
+    @State private var lastOffset: CGSize = .zero
 
     private let backendURL = Config.EXPO_PUBLIC_AGENT_BACKEND_URL
 
@@ -28,10 +32,61 @@ struct ScreenView: View {
                             Image(uiImage: image)
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
+                                .scaleEffect(zoomScale)
+                                .offset(offset)
+                                .gesture(
+                                    MagnifyGesture()
+                                        .onChanged { value in
+                                            let newScale = lastZoomScale * value.magnification
+                                            zoomScale = min(max(newScale, 1.0), 5.0)
+                                        }
+                                        .onEnded { _ in
+                                            lastZoomScale = zoomScale
+                                            if zoomScale <= 1.0 {
+                                                withAnimation(.spring(response: 0.3)) {
+                                                    zoomScale = 1.0
+                                                    lastZoomScale = 1.0
+                                                    offset = .zero
+                                                    lastOffset = .zero
+                                                }
+                                            }
+                                        }
+                                )
+                                .simultaneousGesture(
+                                    DragGesture()
+                                        .onChanged { value in
+                                            guard zoomScale > 1.0 else { return }
+                                            offset = CGSize(
+                                                width: lastOffset.width + value.translation.width,
+                                                height: lastOffset.height + value.translation.height
+                                            )
+                                        }
+                                        .onEnded { _ in
+                                            lastOffset = offset
+                                        }
+                                )
+                                .onTapGesture(count: 2) {
+                                    withAnimation(.spring(response: 0.3)) {
+                                        if zoomScale > 1.0 {
+                                            zoomScale = 1.0
+                                            lastZoomScale = 1.0
+                                            offset = .zero
+                                            lastOffset = .zero
+                                        } else {
+                                            zoomScale = 2.5
+                                            lastZoomScale = 2.5
+                                        }
+                                    }
+                                }
                         } else if isLoading {
-                            ProgressView("Conectando ao seu desktop...")
-                                .tint(Theme.accent)
-                                .foregroundStyle(.white)
+                            VStack(spacing: 16) {
+                                ProgressView()
+                                    .tint(Theme.accent)
+                                    .scaleEffect(1.2)
+                                Text("Conectando ao seu desktop...")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Theme.subtleText)
+                            }
                         } else {
                             ScreenPlaceholderView(isConnected: $isConnected, onConnect: {
                                 connect()
@@ -40,8 +95,9 @@ struct ScreenView: View {
                     }
                     .clipShape(.rect(cornerRadius: isFullScreen ? 0 : 12))
                     .padding(isFullScreen ? 0 : 16)
-                    .onTapGesture(count: 2) {
-                        withAnimation(.snappy) { isFullScreen.toggle() }
+
+                    if !isFullScreen && isConnected {
+                        screenToolbar
                     }
                 }
             }
@@ -50,6 +106,18 @@ struct ScreenView: View {
             .toolbar(isFullScreen ? .hidden : .visible, for: .navigationBar)
             .toolbar(isFullScreen ? .hidden : .visible, for: .tabBar)
             .statusBarHidden(isFullScreen)
+            .overlay(alignment: .topTrailing) {
+                if isFullScreen {
+                    Button {
+                        withAnimation(.snappy) { isFullScreen = false }
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(.white.opacity(0.7))
+                            .padding(16)
+                    }
+                }
+            }
         }
         .preferredColorScheme(.dark)
         .onDisappear {
@@ -87,19 +155,45 @@ struct ScreenView: View {
                         .background(.red.opacity(0.15), in: .capsule)
                 }
             }
-
-            Button {
-                withAnimation(.snappy) { isFullScreen = true }
-            } label: {
-                Image(systemName: "arrow.up.left.and.arrow.down.right")
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.subtleText)
-                    .padding(8)
-                    .background(Theme.cardBg, in: Circle())
-            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
+    }
+
+    private var screenToolbar: some View {
+        HStack(spacing: 16) {
+            Button {
+                withAnimation(.snappy) { isFullScreen = true }
+            } label: {
+                Label("Tela Cheia", systemImage: "arrow.up.left.and.arrow.down.right")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(Theme.subtleText)
+            }
+
+            Spacer()
+
+            if zoomScale > 1.0 {
+                Button {
+                    withAnimation(.spring(response: 0.3)) {
+                        zoomScale = 1.0
+                        lastZoomScale = 1.0
+                        offset = .zero
+                        lastOffset = .zero
+                    }
+                } label: {
+                    Label("Resetar Zoom", systemImage: "arrow.counterclockwise")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Theme.accent)
+                }
+            }
+
+            Text("\(Int(zoomScale * 100))%")
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(Theme.subtleText)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(.ultraThinMaterial)
     }
 
     private func connect() {
@@ -113,7 +207,6 @@ struct ScreenView: View {
 
         Task {
             do {
-                // Check user's desktop status
                 guard let statusURL = URL(string: "\(backendURL)/desktop/status") else {
                     errorMessage = "URL inválida"
                     isLoading = false
@@ -134,7 +227,6 @@ struct ScreenView: View {
                 let desktopRunning = statusJson?["desktop"] as? Bool ?? false
 
                 if !desktopRunning {
-                    // Start user's isolated desktop
                     var startReq = URLRequest(url: URL(string: "\(backendURL)/start-desktop")!)
                     startReq.httpMethod = "POST"
                     startReq.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -147,7 +239,6 @@ struct ScreenView: View {
                         return
                     }
 
-                    // Wait for desktop to boot
                     try await Task.sleep(for: .seconds(4))
                 }
 
@@ -177,6 +268,10 @@ struct ScreenView: View {
 
         isConnected = false
         screenImage = nil
+        zoomScale = 1.0
+        lastZoomScale = 1.0
+        offset = .zero
+        lastOffset = .zero
     }
 
     private func startRefreshing(token: String) {

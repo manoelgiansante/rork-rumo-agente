@@ -346,6 +346,27 @@ class SupabaseService {
         signOut()
     }
 
+    func fetchTransactions() async -> [Transaction] {
+        guard let token = authToken, let userId = currentUser?.id else { return [] }
+        let urlString = "\(baseURL)/rest/v1/transactions?user_id=eq.\(userId)&select=*&order=created_at.desc&limit=50"
+        guard let url = URL(string: urlString) else { return [] }
+
+        var request = URLRequest(url: url)
+        request.setValue(anonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else { return [] }
+
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            return try decoder.decode([Transaction].self, from: data)
+        } catch {
+            return []
+        }
+    }
+
     func fetchApps() async -> [CloudApp] {
         guard let token = authToken else { return [] }
         let urlString = "\(baseURL)/rest/v1/cloud_apps?select=*&order=name.asc"

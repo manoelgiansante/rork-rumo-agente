@@ -7,6 +7,12 @@ struct ProfileView: View {
     @State private var showDeleteAlert = false
     @State private var isDeletingAccount = false
     @State private var deleteError: String?
+    @State private var showLanguagePicker = false
+    @State private var showNotificationSettings = false
+    @AppStorage("app_language") private var appLanguage: String = "pt"
+    @AppStorage("notifications_tasks") private var notifyTasks: Bool = true
+    @AppStorage("notifications_credits") private var notifyCredits: Bool = true
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         NavigationStack {
@@ -21,6 +27,7 @@ struct ProfileView: View {
                         supportSection
                         logoutButton
                         deleteAccountButton
+                        appVersion
                     }
                     .padding(.horizontal, 16)
                     .padding(.bottom, 32)
@@ -29,6 +36,14 @@ struct ProfileView: View {
             .navigationTitle("Perfil")
             .sheet(isPresented: $showSubscription) {
                 SubscriptionView(supabase: supabase)
+            }
+            .sheet(isPresented: $showLanguagePicker) {
+                LanguagePickerSheet(selectedLanguage: $appLanguage)
+                    .presentationDetents([.medium])
+            }
+            .sheet(isPresented: $showNotificationSettings) {
+                NotificationSettingsSheet(notifyTasks: $notifyTasks, notifyCredits: $notifyCredits)
+                    .presentationDetents([.medium])
             }
             .alert("Sair da conta?", isPresented: $showLogoutAlert) {
                 Button("Cancelar", role: .cancel) {}
@@ -127,22 +142,56 @@ struct ProfileView: View {
         }
     }
 
+    private var languageDisplayName: String {
+        switch appLanguage {
+        case "pt": "Português"
+        case "en": "English"
+        case "es": "Español"
+        default: "Português"
+        }
+    }
+
     private var settingsSection: some View {
         VStack(spacing: 0) {
             SectionHeader(title: "Configurações")
-            SettingsRow(icon: "globe", title: "Idioma", value: "Português")
-            SettingsRow(icon: "bell.fill", title: "Notificações", value: "Ativadas")
-            SettingsRow(icon: "paintbrush.fill", title: "Aparência", value: "Automático")
-            SettingsRow(icon: "lock.shield.fill", title: "Privacidade", value: nil)
+
+            Button { showLanguagePicker = true } label: {
+                SettingsRowContent(icon: "globe", title: "Idioma", value: languageDisplayName)
+            }
+
+            Button { showNotificationSettings = true } label: {
+                SettingsRowContent(icon: "bell.fill", title: "Notificações", value: notifyTasks ? "Ativadas" : "Desativadas")
+            }
+
+            Button {
+                if let url = URL(string: "https://rork-rumo-agente.vercel.app/privacidade") {
+                    openURL(url)
+                }
+            } label: {
+                SettingsRowContent(icon: "lock.shield.fill", title: "Privacidade", value: nil)
+            }
         }
     }
 
     private var supportSection: some View {
         VStack(spacing: 0) {
             SectionHeader(title: "Suporte")
-            SettingsRow(icon: "questionmark.circle", title: "Central de Ajuda", value: nil)
-            SettingsRow(icon: "envelope.fill", title: "Contato", value: nil)
-            SettingsRow(icon: "doc.text", title: "Termos de Uso", value: nil)
+
+            Button {
+                if let url = URL(string: "mailto:suporte@rumoagente.com.br") {
+                    openURL(url)
+                }
+            } label: {
+                SettingsRowContent(icon: "envelope.fill", title: "Contato", value: nil)
+            }
+
+            Button {
+                if let url = URL(string: "https://rork-rumo-agente.vercel.app/termos") {
+                    openURL(url)
+                }
+            } label: {
+                SettingsRowContent(icon: "doc.text", title: "Termos de Uso", value: nil)
+            }
         }
     }
 
@@ -180,23 +229,16 @@ struct ProfileView: View {
         }
         .disabled(isDeletingAccount)
     }
-}
 
-struct SectionHeader: View {
-    let title: String
-
-    var body: some View {
-        HStack {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Theme.subtleText)
-            Spacer()
-        }
-        .padding(.bottom, 8)
+    private var appVersion: some View {
+        Text("Rumo Agente v1.0.0")
+            .font(.caption)
+            .foregroundStyle(Theme.subtleText.opacity(0.5))
+            .padding(.top, 8)
     }
 }
 
-struct SettingsRow: View {
+struct SettingsRowContent: View {
     let icon: String
     let title: String
     let value: String?
@@ -230,5 +272,99 @@ struct SettingsRow: View {
             RoundedRectangle(cornerRadius: 14).stroke(Theme.cardBorder, lineWidth: 1)
         )
         .padding(.bottom, 4)
+    }
+}
+
+struct SectionHeader: View {
+    let title: String
+
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Theme.subtleText)
+            Spacer()
+        }
+        .padding(.bottom, 8)
+    }
+}
+
+struct LanguagePickerSheet: View {
+    @Binding var selectedLanguage: String
+    @Environment(\.dismiss) private var dismiss
+
+    private let languages: [(code: String, name: String, flag: String)] = [
+        ("pt", "Português", "🇧🇷"),
+        ("en", "English", "🇺🇸"),
+        ("es", "Español", "🇪🇸"),
+    ]
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(languages, id: \.code) { lang in
+                    Button {
+                        selectedLanguage = lang.code
+                        dismiss()
+                    } label: {
+                        HStack(spacing: 14) {
+                            Text(lang.flag)
+                                .font(.title2)
+                            Text(lang.name)
+                                .font(.body)
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            if selectedLanguage == lang.code {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(Theme.accent)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+            }
+            .navigationTitle("Idioma")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Fechar") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+struct NotificationSettingsSheet: View {
+    @Binding var notifyTasks: Bool
+    @Binding var notifyCredits: Bool
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Toggle(isOn: $notifyTasks) {
+                        Label("Tarefas Concluídas", systemImage: "checkmark.circle.fill")
+                    }
+                    .tint(Theme.accent)
+
+                    Toggle(isOn: $notifyCredits) {
+                        Label("Créditos Baixos", systemImage: "exclamationmark.triangle.fill")
+                    }
+                    .tint(Theme.accent)
+                } header: {
+                    Text("Notificações")
+                } footer: {
+                    Text("Receba alertas quando tarefas forem concluídas ou quando seus créditos estiverem acabando.")
+                }
+            }
+            .navigationTitle("Notificações")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Fechar") { dismiss() }
+                }
+            }
+        }
     }
 }

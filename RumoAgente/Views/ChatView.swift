@@ -25,6 +25,16 @@ struct ChatView: View {
             .navigationTitle("Agente IA")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button("Limpar Conversa", systemImage: "trash") {
+                            viewModel.clearConversation()
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .foregroundStyle(Theme.subtleText)
+                    }
+                }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
                     Button("OK") {
@@ -158,6 +168,7 @@ struct MessageBubble: View {
     let message: ChatMessage
     let onConfirm: () -> Void
     let onCancel: () -> Void
+    @State private var showFullScreenshot = false
 
     private var isUser: Bool { message.role == .user }
 
@@ -166,6 +177,17 @@ struct MessageBubble: View {
             if isUser { Spacer(minLength: 60) }
 
             VStack(alignment: isUser ? .trailing : .leading, spacing: 8) {
+                if !isUser {
+                    HStack(spacing: 6) {
+                        Image(systemName: "brain.head.profile.fill")
+                            .font(.caption)
+                            .foregroundStyle(Theme.accent)
+                        Text("Agente")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(Theme.accent)
+                    }
+                }
+
                 Text(message.content)
                     .font(.body)
                     .foregroundStyle(isUser ? .black : .white)
@@ -180,6 +202,47 @@ struct MessageBubble: View {
                             topTrailingRadius: 20
                         )
                     )
+
+                if let screenshotURL = message.screenshotURL, !screenshotURL.isEmpty {
+                    Button {
+                        showFullScreenshot = true
+                    } label: {
+                        Color(.secondarySystemBackground)
+                            .frame(height: 180)
+                            .overlay {
+                                AsyncImage(url: URL(string: screenshotURL)) { phase in
+                                    switch phase {
+                                    case .success(let image):
+                                        image
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .allowsHitTesting(false)
+                                    case .failure:
+                                        VStack(spacing: 8) {
+                                            Image(systemName: "photo.badge.exclamationmark")
+                                                .font(.title3)
+                                            Text("Erro ao carregar")
+                                                .font(.caption)
+                                        }
+                                        .foregroundStyle(Theme.subtleText)
+                                    default:
+                                        ProgressView()
+                                            .tint(Theme.accent)
+                                    }
+                                }
+                            }
+                            .clipShape(.rect(cornerRadius: 12))
+                            .overlay(alignment: .bottomTrailing) {
+                                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                    .font(.caption)
+                                    .foregroundStyle(.white)
+                                    .padding(6)
+                                    .background(.black.opacity(0.5), in: Circle())
+                                    .padding(8)
+                            }
+                    }
+                    .frame(maxWidth: 260)
+                }
 
                 if message.isConfirmation && !isUser {
                     HStack(spacing: 10) {
@@ -216,6 +279,61 @@ struct MessageBubble: View {
 
             if !isUser { Spacer(minLength: 60) }
         }
+        .fullScreenCover(isPresented: $showFullScreenshot) {
+            if let screenshotURL = message.screenshotURL, let url = URL(string: screenshotURL) {
+                ScreenshotFullView(url: url)
+            }
+        }
+    }
+}
+
+struct ScreenshotFullView: View {
+    let url: URL
+    @Environment(\.dismiss) private var dismiss
+    @State private var zoomScale: CGFloat = 1.0
+    @State private var lastZoomScale: CGFloat = 1.0
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            AsyncImage(url: url) { phase in
+                if let image = phase.image {
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .scaleEffect(zoomScale)
+                        .gesture(
+                            MagnifyGesture()
+                                .onChanged { value in
+                                    zoomScale = min(max(lastZoomScale * value.magnification, 1.0), 5.0)
+                                }
+                                .onEnded { _ in
+                                    lastZoomScale = zoomScale
+                                    if zoomScale <= 1.0 {
+                                        withAnimation(.spring(response: 0.3)) {
+                                            zoomScale = 1.0
+                                            lastZoomScale = 1.0
+                                        }
+                                    }
+                                }
+                        )
+                } else if phase.error != nil {
+                    ContentUnavailableView("Erro ao carregar imagem", systemImage: "photo.badge.exclamationmark")
+                } else {
+                    ProgressView().tint(.white)
+                }
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            Button { dismiss() } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(.white.opacity(0.7))
+                    .padding(16)
+            }
+        }
+        .statusBarHidden()
     }
 }
 
@@ -224,12 +342,19 @@ struct TypingIndicator: View {
 
     var body: some View {
         HStack {
-            HStack(spacing: 5) {
-                ForEach(0..<3, id: \.self) { index in
-                    Circle()
-                        .fill(Theme.subtleText)
-                        .frame(width: 8, height: 8)
-                        .scaleEffect(dotScale[index])
+            HStack(spacing: 6) {
+                HStack(spacing: 6) {
+                    Image(systemName: "brain.head.profile.fill")
+                        .font(.caption2)
+                        .foregroundStyle(Theme.accent.opacity(0.6))
+                }
+                HStack(spacing: 5) {
+                    ForEach(0..<3, id: \.self) { index in
+                        Circle()
+                            .fill(Theme.subtleText)
+                            .frame(width: 8, height: 8)
+                            .scaleEffect(dotScale[index])
+                    }
                 }
             }
             .padding(.horizontal, 16)

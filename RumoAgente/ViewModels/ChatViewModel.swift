@@ -67,4 +67,9 @@ class ChatViewModel {
         inputText = "Não, cancele essa ação."
         await sendMessage()
     }
+
+    func clearConversation() {
+        messages.removeAll()
+        loadInitialMessages()
+    }
 }
