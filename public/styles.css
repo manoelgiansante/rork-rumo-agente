@@ -884,33 +884,37 @@ a { color:var(--accent); text-decoration:none; }
     overflow:hidden;
   }
 
-  /* --- Tab Header desktop adjustments --- */
+  /* --- Hide tab headers on desktop (topbar already shows title) --- */
   .tab-header {
-    padding:24px 32px 16px;
+    display:none;
   }
-  .tab-header h2 { font-size:1.5rem; }
 
   /* --- Tab Body desktop adjustments --- */
   .tab-body {
-    padding:0 32px 32px;
+    padding:24px 32px 32px;
   }
 
   /* --- DASHBOARD desktop layout --- */
-  #tab-dashboard .header-section {
-    padding:4px 0 20px;
+  #tab-dashboard .tab-body {
+    max-width:1200px;
   }
-  #tab-dashboard .header-section h3 { font-size:1.35rem; }
-  #tab-dashboard .header-section .date-text { font-size:0.95rem; }
+  #tab-dashboard .header-section {
+    padding:0 0 24px;
+  }
+  #tab-dashboard .header-section h3 { font-size:1.6rem; }
+  #tab-dashboard .header-section .date-text { font-size:1rem; }
 
   /* Hide the mobile avatar in dashboard header (we have topbar) */
   #tab-dashboard .header-section .avatar { display:none; }
 
-  /* Dashboard stats cards grid */
-  .dashboard-stats-row {
+  /* Dashboard cards in 2-column grid */
+  .dashboard-cards-row {
     display:grid;
     grid-template-columns:1fr 1fr;
     gap:16px;
+    margin-bottom:8px;
   }
+  .dashboard-cards-row .card { margin-bottom:0; }
 
   .card {
     border-radius:16px;
@@ -923,23 +927,22 @@ a { color:var(--accent); text-decoration:none; }
     box-shadow:0 4px 24px rgba(0,0,0,0.2);
   }
 
-  .credits-card {
-    min-height:auto;
-  }
-
   .quick-actions {
     gap:16px;
-    margin:20px 0;
+    margin:24px 0;
   }
   .quick-btn {
-    font-size:0.75rem;
-    padding:12px 8px;
+    font-size:0.8rem;
+    padding:16px 8px;
     border-radius:14px;
-    transition:background 0.15s ease, transform 0.15s ease;
+    background:var(--card-bg);
+    border:1px solid var(--card-border);
+    transition:all 0.15s ease;
   }
   .quick-btn:hover {
-    background:rgba(255,255,255,0.03);
+    border-color:rgba(255,255,255,0.1);
     transform:translateY(-2px);
+    box-shadow:0 4px 16px rgba(0,0,0,0.2);
   }
   .quick-btn .q-icon {
     width:56px; height:56px;
@@ -947,50 +950,63 @@ a { color:var(--accent); text-decoration:none; }
   }
   .quick-btn .q-icon svg { width:24px; height:24px; }
 
-  .section-title { font-size:1rem; margin:20px 0 12px; }
+  .section-title { font-size:1.1rem; margin:24px 0 12px; }
 
   /* Tasks list wider */
   .tasks-list {
     background:var(--card-bg);
     border:1px solid var(--card-border);
     border-radius:16px;
-    padding:8px;
+    padding:12px;
   }
   .empty-state { padding:48px 20px; }
 
   /* --- SCREEN TAB desktop --- */
-  .screen-container {
-    margin:0 32px 32px;
-    border-radius:16px;
+  #tab-screen {
+    padding:0;
   }
-  .screen-placeholder h3 { font-size:1.3rem; }
-  .screen-placeholder p { font-size:1rem; max-width:400px; }
+  .screen-container {
+    margin:0;
+    border-radius:0;
+    flex:1;
+  }
+  .screen-placeholder h3 { font-size:1.5rem; }
+  .screen-placeholder p { font-size:1.05rem; max-width:450px; }
 
   /* --- CHAT desktop split view --- */
   #tab-chat.active {
     flex-direction:row;
   }
+  #tab-chat .tab-header {
+    display:flex;
+    padding:16px 24px 12px;
+    border-bottom:1px solid var(--card-border);
+  }
+  #tab-chat .tab-header h2 { font-size:1.15rem; }
   #tab-chat .chat-area {
-    flex:0 0 40%;
+    flex:1;
+    min-width:380px;
+    max-width:480px;
     display:flex;
     flex-direction:column;
     border-right:1px solid var(--card-border);
   }
   .split-screen {
     display:flex !important;
-    flex:0 0 60%;
-    background:#000;
+    flex:1;
+    background:#0A0E14;
     align-items:center;
     justify-content:center;
     position:relative;
   }
 
   .chat-messages { padding:16px 20px; }
-  .bubble { font-size:1rem; padding:14px 18px; }
-  .chat-input-bar { padding:12px 20px; }
+  .bubble { font-size:0.95rem; padding:12px 16px; max-width:100%; }
+  .message { max-width:90%; }
+  .chat-input-bar { padding:12px 16px; }
   .chat-input-bar input {
-    padding:12px 20px;
-    font-size:1rem;
+    padding:12px 18px;
+    font-size:0.95rem;
   }
 
   /* --- APPS desktop grid --- */
@@ -1022,9 +1038,10 @@ a { color:var(--accent); text-decoration:none; }
 
   /* --- PROFILE desktop centered card --- */
   #tab-profile .tab-body {
-    max-width:600px;
+    max-width:640px;
     margin:0 auto;
     width:100%;
+    padding-top:32px;
   }
 
   .profile-header { padding:12px 0 28px; }
@@ -1098,9 +1115,7 @@ a { color:var(--accent); text-decoration:none; }
 }
 
 @media(min-width:1440px) {
-  .tab-body { padding:0 40px 40px; }
-  .tab-header { padding:28px 40px 20px; }
-  .screen-container { margin:0 40px 40px; }
+  .tab-body { padding:24px 48px 40px; }
 }
 
 body.fullscreen .tab-bar { display:none; }
