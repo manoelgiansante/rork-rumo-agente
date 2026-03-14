@@ -71,9 +71,14 @@ export default async function handler(req, res) {
       ]);
     }
 
-    await supabase.from('profiles')
+    // Optimistic locking to prevent race condition on credit deduction
+    const { data: updateResult } = await supabase.from('profiles')
       .update({ credits: profile.credits - 1 })
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
+      .eq('credits', profile.credits);
+    if (!updateResult || updateResult.length === 0) {
+      console.warn(`[RACE] Credit deduction race detected for user ${user.id.substring(0, 8)}`);
+    }
 
     await supabase.from('credit_transactions').insert({
       user_id: user.id, amount: -1, type: 'usage', description: 'Mensagem de chat'

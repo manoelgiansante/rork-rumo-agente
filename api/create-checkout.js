@@ -15,9 +15,10 @@ export default async function handler(req, res) {
 
   try {
     const { plan } = req.body;
+    if (typeof plan !== 'string') return res.status(400).json({ error: 'Plano invalido' });
     const prices = { starter: 4990, pro: 14990, enterprise: 49990 };
 
-    if (!prices[plan]) return res.status(400).json({ error: 'Plano inválido' });
+    if (!prices[plan]) return res.status(400).json({ error: 'Plano invalido' });
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -40,6 +41,7 @@ export default async function handler(req, res) {
     res.json({ url: session.url, sessionId: session.id });
   } catch (err) {
     console.error('Checkout error:', err);
-    res.status(500).json({ error: err.message });
+    console.error('Stripe error details:', err.message);
+    res.status(500).json({ error: 'Erro ao criar sessao de checkout. Tente novamente.' });
   }
 }

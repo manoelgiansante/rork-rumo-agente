@@ -138,25 +138,25 @@ ALTER TABLE learned_workflows ENABLE ROW LEVEL SECURITY;
 ALTER TABLE agent_action_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pending_confirmations ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies (allow service role full access, users see only their own data)
+-- RLS Policies (users can only access their own data)
 DO $$ BEGIN
-  CREATE POLICY "service_all" ON agent_memory FOR ALL USING (true) WITH CHECK (true);
+  CREATE POLICY "users_own_data" ON agent_memory FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 DO $$ BEGIN
-  CREATE POLICY "service_all" ON secure_credentials FOR ALL USING (true) WITH CHECK (true);
+  CREATE POLICY "users_own_data" ON secure_credentials FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 DO $$ BEGIN
-  CREATE POLICY "service_all" ON learned_workflows FOR ALL USING (true) WITH CHECK (true);
+  CREATE POLICY "users_own_data" ON learned_workflows FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 DO $$ BEGIN
-  CREATE POLICY "service_all" ON agent_action_log FOR ALL USING (true) WITH CHECK (true);
+  CREATE POLICY "users_own_data" ON agent_action_log FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 DO $$ BEGIN
-  CREATE POLICY "service_all" ON pending_confirmations FOR ALL USING (true) WITH CHECK (true);
+  CREATE POLICY "users_own_data" ON pending_confirmations FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 `;

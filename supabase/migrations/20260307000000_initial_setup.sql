@@ -123,7 +123,7 @@ CREATE POLICY "Users can view own transactions" ON credit_transactions FOR SELEC
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, display_name, avatar_url, plan, credits)
+  INSERT INTO public.profiles (user_id, email, display_name, avatar_url, plan, credits)
   VALUES (
     NEW.id,
     NEW.email,

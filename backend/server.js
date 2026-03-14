@@ -154,7 +154,7 @@ app.post('/start-desktop', authenticateUser, async (req, res) => {
       success: true,
       status: result.status,
       desktop: true,
-      noVncUrl: `http://${hostname}/novnc/${result.noVncPort}/vnc.html?autoconnect=true&password=${result.vncPassword || 'rumoagente'}&resize=scale`,
+      noVncUrl: `http://${hostname}/novnc/${result.noVncPort}/vnc.html?autoconnect=true&password=${result.vncPassword || process.env.VNC_DEFAULT_PASSWORD || 'changeme'}&resize=scale`,
       message: 'Desktop iniciado com sucesso'
     });
   } catch (err) {

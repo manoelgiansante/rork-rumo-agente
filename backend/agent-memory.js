@@ -1,13 +1,17 @@
 const crypto = require('crypto');
 
 // Encryption key from env (32 bytes for AES-256)
-const ENCRYPTION_KEY = process.env.CREDENTIAL_ENCRYPTION_KEY || 'rumo-agente-default-key-32bytes!';
-if (!process.env.CREDENTIAL_ENCRYPTION_KEY) {
-  console.warn('[SECURITY] CREDENTIAL_ENCRYPTION_KEY não configurada! Usando chave padrão. Defina no .env para produção.');
+const ENCRYPTION_KEY = process.env.CREDENTIAL_ENCRYPTION_KEY;
+if (!ENCRYPTION_KEY) {
+  console.error('[SECURITY CRITICAL] CREDENTIAL_ENCRYPTION_KEY nao configurada! Credenciais NAO poderao ser salvas. Defina no .env com exatamente 32 caracteres.');
+}
+if (ENCRYPTION_KEY && ENCRYPTION_KEY.length !== 32) {
+  console.error('[SECURITY] CREDENTIAL_ENCRYPTION_KEY deve ter exatamente 32 caracteres (AES-256). Atual: ' + ENCRYPTION_KEY.length);
 }
 const IV_LENGTH = 16;
 
 function encrypt(text) {
+  if (!ENCRYPTION_KEY) throw new Error('CREDENTIAL_ENCRYPTION_KEY nao configurada. Impossivel criptografar.');
   const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(ENCRYPTION_KEY, 'utf-8').subarray(0, 32), iv);
   let encrypted = cipher.update(text, 'utf8', 'hex');
@@ -16,6 +20,7 @@ function encrypt(text) {
 }
 
 function decrypt(text) {
+  if (!ENCRYPTION_KEY) throw new Error('CREDENTIAL_ENCRYPTION_KEY nao configurada. Impossivel descriptografar.');
   const parts = text.split(':');
   const iv = Buffer.from(parts.shift(), 'hex');
   const encrypted = parts.join(':');

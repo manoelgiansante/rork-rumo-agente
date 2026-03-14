@@ -12,6 +12,12 @@ export default async function handler(req, res) {
   if (authError || !user) return res.status(401).json({ error: 'Invalid token' });
 
   try {
+    // Require confirmation field to prevent accidental deletion
+    const { confirm } = req.body || {};
+    if (confirm !== 'DELETE_MY_ACCOUNT') {
+      return res.status(400).json({ error: 'Envie { "confirm": "DELETE_MY_ACCOUNT" } para confirmar a exclusao' });
+    }
+
     // Delete user data from all related tables
     const tablesToDelete = [
       'chat_messages',

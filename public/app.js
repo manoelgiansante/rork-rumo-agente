@@ -819,10 +819,12 @@ function renderApps() {
   grid.innerHTML = filtered.map(app => {
     const icon = icons[app.category] || '📦';
     const c = colors[app.category] || '156,163,175';
-    return '<div class="app-card' + (app.is_selected ? ' selected' : '') + '" onclick="toggleApp(\'' + app.name + '\')">' +
+    const safeName = escapeHtml(app.name);
+    const safeStatus = escapeHtml(statusNames[app.status] || app.status);
+    return '<div class="app-card' + (app.is_selected ? ' selected' : '') + '" onclick="toggleApp(\'' + safeName.replace(/'/g, "\\'") + '\')">' +
       '<div class="app-card-icon" style="background:rgba(' + c + ',0.12)">' + icon + '</div>' +
-      '<div class="app-card-name">' + app.name + '</div>' +
-      '<div class="app-card-status" style="color:' + (statusColors[app.status] || 'var(--subtle)') + '">' + (statusNames[app.status] || app.status) + '</div>' +
+      '<div class="app-card-name">' + safeName + '</div>' +
+      '<div class="app-card-status" style="color:' + (statusColors[app.status] || 'var(--subtle)') + '">' + safeStatus + '</div>' +
       '</div>';
   }).join('');
 }
@@ -831,7 +833,10 @@ function renderCategoryFilter() {
   const cats = [...new Set(apps.map(a => a.category))];
   const container = document.getElementById('category-filter');
   container.innerHTML = '<button class="cat-chip' + (!selectedCategory ? ' active' : '') + '" onclick="filterCategory(null)">Todos</button>' +
-    cats.map(c => '<button class="cat-chip' + (selectedCategory === c ? ' active' : '') + '" onclick="filterCategory(\'' + c + '\')">' + c + '</button>').join('');
+    cats.map(c => {
+      const safeC = escapeHtml(c);
+      return '<button class="cat-chip' + (selectedCategory === c ? ' active' : '') + '" onclick="filterCategory(\'' + safeC.replace(/'/g, "\\'") + '\')">' + safeC + '</button>';
+    }).join('');
 }
 
 function filterCategory(cat) {

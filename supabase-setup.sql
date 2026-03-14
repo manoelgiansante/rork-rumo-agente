@@ -3,6 +3,21 @@
 -- Cole tudo isso no SQL Editor do Supabase
 -- ============================================
 
+-- 1. Tabela de perfis (referenciada por todas as queries do backend)
+CREATE TABLE IF NOT EXISTS profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT,
+  display_name TEXT,
+  avatar_url TEXT,
+  plan TEXT NOT NULL DEFAULT 'free',
+  credits INTEGER NOT NULL DEFAULT 10,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_profiles_user_id ON profiles(user_id);
+
 -- 2. Tabela de tarefas do agente
 CREATE TABLE IF NOT EXISTS agent_tasks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -82,12 +97,17 @@ CREATE INDEX IF NOT EXISTS idx_credit_transactions_user_id ON credit_transaction
 -- ROW LEVEL SECURITY
 -- ============================================
 
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE agent_tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cloud_apps ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE credit_transactions ENABLE ROW LEVEL SECURITY;
+
+-- Profiles
+CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = user_id);
 
 -- Agent Tasks
 CREATE POLICY "Users can view own tasks" ON agent_tasks FOR SELECT USING (auth.uid() = user_id);
@@ -123,7 +143,7 @@ CREATE POLICY "Users can view own transactions" ON credit_transactions FOR SELEC
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, display_name, avatar_url, plan, credits)
+  INSERT INTO public.profiles (user_id, email, display_name, avatar_url, plan, credits)
   VALUES (
     NEW.id,
     NEW.email,
