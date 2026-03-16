@@ -28,7 +28,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (splash) splash.classList.add('hidden');
   }, 1200);
 
-  if (authToken) {
+  // Check for OAuth callback tokens in URL hash first (before checking stored token)
+  const urlHash = window.location.hash;
+  if (urlHash && urlHash.includes('access_token')) {
+    checkSession();
+  } else if (authToken) {
     checkSession();
   } else if (!localStorage.getItem('has_onboarded')) {
     document.getElementById('auth-screen').classList.remove('active');
@@ -246,7 +250,7 @@ async function checkSession() {
         authToken = token;
         localStorage.setItem('auth_token', authToken);
         if (rToken) { refreshToken = rToken; localStorage.setItem('refresh_token', rToken); }
-        window.location.hash = '';
+        history.replaceState(null, '', window.location.pathname + window.location.search);
       }
     }
 
@@ -272,7 +276,29 @@ async function loadProfile() {
     headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + authToken }
   });
   const profiles = await profileRes.json();
-  const profile = profiles[0] || {};
+  let profile = profiles[0];
+
+  // Auto-create profile if none exists (new user)
+  if (!profile) {
+    const displayName = user.user_metadata?.display_name || user.email.split('@')[0];
+    await fetch(SUPABASE_URL + '/rest/v1/profiles', {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + authToken,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify({
+        user_id: user.id,
+        email: user.email,
+        display_name: displayName,
+        plan: 'free',
+        credits: 10
+      })
+    });
+    profile = { plan: 'free', credits: 10, display_name: displayName };
+  }
 
   currentUser = {
     id: user.id,
@@ -448,6 +474,9 @@ async function connectScreen() {
       noVncUrl = startData.noVncUrl;
       // Wait for desktop to fully boot
       await new Promise(r => setTimeout(r, 4000));
+    } else if (statusData.noVncUrl) {
+      // Desktop already running - use its noVNC URL
+      noVncUrl = statusData.noVncUrl;
     }
 
     document.getElementById('screen-placeholder').style.display = 'none';
@@ -554,6 +583,11 @@ async function checkAgentStatus() {
 // Configure marked for safe markdown rendering
 if (typeof marked !== 'undefined') {
   marked.setOptions({ breaks: true, gfm: true });
+  // Sanitize: strip raw HTML tags from markdown to prevent XSS
+  const renderer = new marked.Renderer();
+  const origHtml = renderer.html;
+  renderer.html = function(text) { return escapeHtml(typeof text === 'string' ? text : text.text || ''); };
+  marked.use({ renderer });
 }
 
 // Chat history for context
@@ -838,10 +872,12 @@ function renderApps() {
   grid.innerHTML = filtered.map(app => {
     const icon = icons[app.category] || '📦';
     const c = colors[app.category] || '156,163,175';
-    return '<div class="app-card' + (app.is_selected ? ' selected' : '') + '" onclick="toggleApp(\'' + app.name + '\')">' +
+    const safeName = escapeHtml(app.name);
+    const safeStatus = escapeHtml(statusNames[app.status] || app.status);
+    return '<div class="app-card' + (app.is_selected ? ' selected' : '') + '" onclick="toggleApp(\'' + safeName.replace(/'/g, "\\'") + '\')">' +
       '<div class="app-card-icon" style="background:rgba(' + c + ',0.12)">' + icon + '</div>' +
-      '<div class="app-card-name">' + app.name + '</div>' +
-      '<div class="app-card-status" style="color:' + (statusColors[app.status] || 'var(--subtle)') + '">' + (statusNames[app.status] || app.status) + '</div>' +
+      '<div class="app-card-name">' + safeName + '</div>' +
+      '<div class="app-card-status" style="color:' + (statusColors[app.status] || 'var(--subtle)') + '">' + safeStatus + '</div>' +
       '</div>';
   }).join('');
 }
@@ -942,7 +978,7 @@ async function subscribe() {
       body: JSON.stringify({ plan: selectedPlan })
     });
     const data = await res.json();
-    if (data.url) window.open(data.url, '_blank');
+    if (data.url) window.location.href = data.url;
   } catch (e) {
     alert('Erro ao criar checkout');
   }
@@ -957,7 +993,7 @@ async function buyCredits(amount) {
       body: JSON.stringify({ amount })
     });
     const data = await res.json();
-    if (data.url) window.open(data.url, '_blank');
+    if (data.url) window.location.href = data.url;
   } catch (e) {
     alert('Erro ao comprar creditos');
   }
@@ -1268,6 +1304,21 @@ function handleDeepLink() {
       }
     }, 200);
     setTimeout(() => clearInterval(waitForApp), 10000);
+  }
+
+  // Handle Stripe checkout return (#success / #cancel)
+  const hash = window.location.hash;
+  if (hash === '#success') {
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+    // Refresh profile to get updated credits/plan after payment
+    setTimeout(async () => {
+      if (authToken) {
+        await loadProfile();
+        showSnackbar('Pagamento confirmado! Seus créditos foram atualizados.', null, null);
+      }
+    }, 2000);
+  } else if (hash === '#cancel') {
+    history.replaceState(null, '', window.location.pathname + window.location.search);
   }
 }
 

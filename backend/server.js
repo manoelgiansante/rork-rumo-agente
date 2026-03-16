@@ -30,7 +30,7 @@ app.use(cors({
   credentials: true
 }));
 
-// Rate limiting
+// Rate limiting (with periodic cleanup to prevent memory leak)
 const rateLimit = {};
 function rateLimiter(windowMs, max) {
   return (req, res, next) => {
@@ -47,6 +47,15 @@ function rateLimiter(windowMs, max) {
     next();
   };
 }
+// Clean up expired rate limit entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const key of Object.keys(rateLimit)) {
+    if (now - rateLimit[key].start > 120000) {
+      delete rateLimit[key];
+    }
+  }
+}, 5 * 60 * 1000);
 
 // Middleware para autenticar requests do app
 async function authenticateUser(req, res, next) {
@@ -65,6 +74,7 @@ async function authenticateUser(req, res, next) {
 // ============================================
 app.post('/webhook/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
+  if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
   let event;
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
@@ -80,6 +90,15 @@ app.post('/webhook/stripe', express.raw({ type: 'application/json' }), async (re
       const plan = session.metadata.plan;
       const credits = session.metadata.credits;
 
+      // Idempotency: check if this payment was already processed
+      const paymentId = session.payment_intent || session.id;
+      const { data: existing } = await supabase.from('credit_transactions')
+        .select('id').eq('stripe_payment_id', paymentId).limit(1);
+      if (existing && existing.length > 0) {
+        console.log(`Webhook: payment ${paymentId} already processed, skipping`);
+        break;
+      }
+
       if (credits) {
         const amount = parseInt(credits);
         // Fetch current credits then add
@@ -91,7 +110,7 @@ app.post('/webhook/stripe', express.raw({ type: 'application/json' }), async (re
         await supabase.from('credit_transactions').insert({
           user_id: userId, amount, type: 'purchase',
           description: `Compra de ${amount} creditos`,
-          stripe_payment_id: session.payment_intent
+          stripe_payment_id: paymentId
         });
       } else if (plan) {
         const planCredits = { starter: 100, pro: 500, enterprise: 2000 }[plan] || 10;
@@ -102,6 +121,28 @@ app.post('/webhook/stripe', express.raw({ type: 'application/json' }), async (re
           stripe_subscription_id: session.subscription,
           plan, status: 'active'
         }, { onConflict: 'user_id' });
+        // Record transaction for idempotency tracking
+        await supabase.from('credit_transactions').insert({
+          user_id: userId, amount: planCredits, type: 'purchase',
+          description: `Assinatura plano ${plan}`,
+          stripe_payment_id: paymentId
+        });
+      }
+      break;
+    }
+    case 'invoice.payment_failed': {
+      const invoice = event.data.object;
+      const subId = invoice.subscription;
+      if (subId) {
+        const { data } = await supabase.from('subscriptions')
+          .select('user_id').eq('stripe_subscription_id', subId).single();
+        if (data) {
+          console.log(`Payment failed for user ${data.user_id}, subscription ${subId}`);
+          // Mark subscription as past_due
+          await supabase.from('subscriptions')
+            .update({ status: 'past_due' })
+            .eq('stripe_subscription_id', subId);
+        }
       }
       break;
     }
@@ -139,6 +180,12 @@ app.get('/status', (req, res) => {
 // ============================================
 app.get('/desktop/status', authenticateUser, (req, res) => {
   const info = containerManager.getDesktopInfo(req.user.id);
+  // Include full noVNC URL if desktop is running
+  if (info.desktop && info.noVncPort) {
+    const host = req.headers.host || process.env.VPS_HOST || '216.238.111.253';
+    const hostname = host.split(':')[0];
+    info.noVncUrl = `http://${hostname}/novnc/${info.noVncPort}/vnc.html?autoconnect=true&resize=scale`;
+  }
   res.json(info);
 });
 
@@ -211,10 +258,22 @@ app.post('/chat', authenticateUser, rateLimiter(60000, 20), async (req, res) => 
     }
     const userId = req.user.id;
 
-    const { data: profile } = await supabase
+    let { data: profile } = await supabase
       .from('profiles').select('credits').eq('user_id', userId).single();
 
-    if (!profile || profile.credits <= 0) {
+    // Auto-create profile if none exists (new user)
+    if (!profile) {
+      const { data: newProfile } = await supabase.from('profiles').insert({
+        user_id: userId,
+        email: req.user.email,
+        display_name: req.user.user_metadata?.display_name || req.user.email?.split('@')[0] || 'User',
+        plan: 'free',
+        credits: 10
+      }).select('credits').single();
+      profile = newProfile || { credits: 10 };
+    }
+
+    if (profile.credits <= 0) {
       return res.status(403).json({ error: 'Sem créditos disponíveis' });
     }
 
@@ -387,7 +446,7 @@ app.post('/execute', authenticateUser, rateLimiter(60000, 30), async (req, res) 
       const text = String(parameters?.text || '');
       if (text.length > 500) return res.status(400).json({ error: 'Texto muito longo (max 500 chars)' });
       // Sanitize text for shell safety - use base64 for complex text
-      if (/[`$\\'";&|<>]/.test(text)) {
+      if (/[`$\\'";&|<>\n\r]/.test(text)) {
         const b64 = Buffer.from(text).toString('base64');
         args = ['exec', name, 'bash', '-c', `export DISPLAY=:1 && echo '${b64}' | base64 -d | xdotool type --delay 50 --clearmodifiers --file -`];
       } else {
@@ -659,6 +718,53 @@ app.get('/action-log', authenticateUser, async (req, res) => {
     res.json(data || []);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar historico' });
+  }
+});
+
+// ============================================
+// Deletar conta do usuario
+// ============================================
+app.delete('/api/delete-account', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Delete all user data from every table
+    const tables = [
+      'pending_confirmations',
+      'agent_action_log',
+      'learned_workflows',
+      'secure_credentials',
+      'agent_memory',
+      'credit_transactions',
+      'chat_messages',
+      'agent_tasks',
+      'subscriptions',
+      'profiles'
+    ];
+
+    for (const table of tables) {
+      await supabase.from(table).delete().eq('user_id', userId);
+    }
+
+    // Delete conversations
+    await supabase.from('conversations').delete().eq('user_id', userId);
+
+    // Stop any running desktop container
+    try {
+      await containerManager.stopDesktop(userId);
+    } catch (e) {}
+
+    // Delete auth user via admin API
+    const { error } = await supabase.auth.admin.deleteUser(userId);
+    if (error) {
+      console.error('Error deleting auth user:', error);
+      return res.status(500).json({ error: 'Erro ao excluir conta de autenticação' });
+    }
+
+    res.json({ success: true, message: 'Conta excluída com sucesso' });
+  } catch (err) {
+    console.error('Delete account error:', err);
+    res.status(500).json({ error: 'Erro ao excluir conta' });
   }
 });
 
