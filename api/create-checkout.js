@@ -33,13 +33,13 @@ export default async function handler(req, res) {
         },
         quantity: 1,
       }],
-      success_url: 'https://rork-rumo-agente.vercel.app/success?session_id={CHECKOUT_SESSION_ID}',
-      cancel_url: 'https://rork-rumo-agente.vercel.app/cancel',
+      success_url: (process.env.APP_URL || 'https://agente.agrorumo.com') + '/#success',
+      cancel_url: (process.env.APP_URL || 'https://agente.agrorumo.com') + '/#cancel',
     });
 
     res.json({ url: session.url, sessionId: session.id });
   } catch (err) {
     console.error('Checkout error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Erro ao criar checkout. Tente novamente.' });
   }
 }

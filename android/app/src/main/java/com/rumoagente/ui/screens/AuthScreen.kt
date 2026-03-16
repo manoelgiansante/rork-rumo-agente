@@ -280,7 +280,7 @@ fun AuthScreen(
                     withStyle(SpanStyle(color = RumoColors.SubtleText, fontSize = 12.sp)) {
                         append("Li e concordo com a ")
                     }
-                    pushStringAnnotation("URL", "https://rork-rumo-agente.vercel.app/privacidade")
+                    pushStringAnnotation("URL", "${Config.AGENT_URL}/privacidade")
                     withStyle(
                         SpanStyle(
                             color = RumoColors.AccentBlue,
@@ -294,7 +294,7 @@ fun AuthScreen(
                     withStyle(SpanStyle(color = RumoColors.SubtleText, fontSize = 12.sp)) {
                         append(" e os ")
                     }
-                    pushStringAnnotation("URL", "https://rork-rumo-agente.vercel.app/termos")
+                    pushStringAnnotation("URL", "${Config.AGENT_URL}/termos")
                     withStyle(
                         SpanStyle(
                             color = RumoColors.AccentBlue,
@@ -443,7 +443,7 @@ fun AuthScreen(
             Button(
                 onClick = {
                     // Apple Sign-In via web on Android
-                    uriHandler.openUri("https://rork-rumo-agente.vercel.app/auth/apple")
+                    uriHandler.openUri("${Config.AGENT_URL}/auth/apple")
                 },
                 modifier = Modifier
                     .fillMaxWidth()

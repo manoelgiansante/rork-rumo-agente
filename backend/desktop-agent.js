@@ -248,9 +248,15 @@ async function executeTool(userId, toolName, toolInput, supabase, sessionId) {
       }
       const text = String(toolInput.text || '');
       if (text.length > 1000) return 'Texto muito longo (máximo 1000 caracteres).';
-      // Use xdotool with -- to prevent flag injection, escape single quotes
-      const safeText = text.replace(/'/g, "'\\''");
-      execInContainer(userId, `xdotool type --delay 30 -- '${safeText}'`);
+      // Block shell metacharacters in xdotool text input
+      if (/[`$\\]/.test(text)) {
+        // Use base64 encoding to safely pass text with special chars
+        const b64 = Buffer.from(text).toString('base64');
+        execInContainer(userId, `echo '${b64}' | base64 -d | xdotool type --delay 30 --clearmodifiers --file -`);
+      } else {
+        const safeText = text.replace(/'/g, "'\\''");
+        execInContainer(userId, `xdotool type --delay 30 -- '${safeText}'`);
+      }
       return `Texto digitado: "${toolInput.text}"`;
     }
 

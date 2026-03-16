@@ -351,6 +351,7 @@ function logout(skipConfirm) {
   authToken = null;
   refreshToken = null;
   currentUser = null;
+  chatHistory = [];
   localStorage.removeItem('auth_token');
   localStorage.removeItem('refresh_token');
   if (refreshInterval) { clearInterval(refreshInterval); refreshInterval = null; }
@@ -555,6 +556,9 @@ if (typeof marked !== 'undefined') {
   marked.setOptions({ breaks: true, gfm: true });
 }
 
+// Chat history for context
+let chatHistory = [];
+
 async function sendChat() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
@@ -563,6 +567,11 @@ async function sendChat() {
   document.getElementById('send-btn').disabled = true;
 
   addMessage('user', text);
+
+  // Add to chat history
+  chatHistory.push({ role: 'user', content: text });
+  // Keep last 20 messages for context
+  if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
 
   // Create assistant message placeholder for streaming
   const container = document.getElementById('chat-messages');
@@ -584,20 +593,21 @@ async function sendChat() {
         'Authorization': 'Bearer ' + authToken
       },
       body: JSON.stringify({
-        messages: [{ role: 'user', content: text }],
+        messages: chatHistory.slice(),
         conversationId: null
       })
     });
 
     if (!res.ok) {
-      // Handle error response
+      // Handle error response - use textContent to prevent XSS
       try {
         const data = await res.json();
-        streamContent.innerHTML = typeof marked !== 'undefined' ? marked.parse(data.message || data.error || 'Erro') : escapeHtml(data.message || data.error || 'Erro');
+        streamContent.textContent = data.message || data.error || 'Erro ao processar mensagem.';
       } catch (e) {
         streamContent.textContent = 'Desculpe, ocorreu um erro. Tente novamente.';
       }
       cursor.remove();
+      document.getElementById('send-btn').disabled = false;
       return;
     }
 
@@ -649,9 +659,15 @@ async function sendChat() {
 
     cursor.remove();
 
+    // Add assistant response to chat history
+    const assistantText = streamContent.textContent || streamContent.innerText || '';
+    if (assistantText) {
+      chatHistory.push({ role: 'assistant', content: assistantText });
+      if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
+    }
+
     // Check if message needs confirmation (like iOS)
-    const finalText = streamContent.textContent || streamContent.innerText || '';
-    if (isConfirmationMessage(finalText)) {
+    if (isConfirmationMessage(assistantText)) {
       appendConfirmationButtons(div);
     }
 
@@ -666,6 +682,9 @@ async function sendChat() {
     streamContent.textContent = 'Erro de conexão. Verifique sua internet.';
     cursor.remove();
   }
+
+  // Always re-enable send button
+  document.getElementById('send-btn').disabled = !document.getElementById('chat-input').value.trim();
 }
 
 function isConfirmationMessage(text) {
@@ -964,7 +983,7 @@ function incrementCreditsUsed() {
 async function deleteAccount() {
   if (!confirm('Tem certeza? Esta ação é irreversível e todos os seus dados serão excluídos permanentemente.')) return;
   try {
-    const res = await fetch('https://rork-rumo-agente.vercel.app/api/delete-account', {
+    const res = await fetch(API_URL + '/api/delete-account', {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',

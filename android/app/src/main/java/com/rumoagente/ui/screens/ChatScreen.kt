@@ -168,8 +168,7 @@ fun ChatScreen() {
             if (!streamSuccess) {
                 // Fallback to regular chat API (matches iOS ClaudeService format)
                 try {
-                    val lastUserMsg = messages.lastOrNull { it.isUser }?.content ?: ""
-                    val history = messages
+                    val chatMessages = messages
                         .filter { !it.isStreaming || it.content.isNotBlank() }
                         .takeLast(20)
                         .map { msg ->
@@ -179,9 +178,7 @@ fun ChatScreen() {
                             )
                         }
                     val chatRequest = ChatRequest(
-                        message = lastUserMsg,
-                        appContext = selectedApp ?: "",
-                        history = history
+                        messages = chatMessages
                     )
                     val response = RetrofitInstance.chatApi.chat(
                         body = chatRequest

@@ -1,5 +1,6 @@
 package com.rumoagente.ui.screens
 
+import com.rumoagente.data.api.Config
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
@@ -83,12 +84,12 @@ fun SubscriptionScreen(
     }
 
     fun subscribe(plan: SubscriptionPlan) {
-        // Match iOS: open web URL for checkout
-        openCheckoutUrl("https://rork-rumo-agente.vercel.app/#subscription")
+        // Open web URL for checkout
+        openCheckoutUrl("${Config.AGENT_URL}/#subscription")
     }
 
     fun buyCredits(amount: Int) {
-        openCheckoutUrl("https://rork-rumo-agente.vercel.app/#subscription")
+        openCheckoutUrl("${Config.AGENT_URL}/#subscription")
     }
 
     Scaffold(

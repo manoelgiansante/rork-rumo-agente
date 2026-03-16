@@ -213,12 +213,11 @@ data class DesktopStatusResponse(
     val lastActivity: Long? = null
 )
 
-// ── Chat API request/response (matches iOS ClaudeService.swift) ─────────────
+// ── Chat API request/response (matches backend server.js /chat endpoint) ─────
 
 data class ChatRequest(
-    val message: String,
-    val appContext: String = "",
-    val history: List<Map<String, String>> = emptyList()
+    val messages: List<Map<String, String>>,
+    val conversationId: String? = null
 )
 
 data class ChatResponse(

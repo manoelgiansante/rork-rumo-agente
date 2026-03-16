@@ -107,7 +107,7 @@ struct AuthView: View {
                                     .foregroundStyle(agreedToTerms ? Theme.accent : Theme.subtleText)
                             }
 
-                            Text("Li e concordo com a [Política de Privacidade](https://rork-rumo-agente.vercel.app/privacidade) e os [Termos de Uso](https://rork-rumo-agente.vercel.app/termos)")
+                            Text("Li e concordo com a [Política de Privacidade](\(Config.EXPO_PUBLIC_AGENT_BACKEND_URL)/privacidade) e os [Termos de Uso](\(Config.EXPO_PUBLIC_AGENT_BACKEND_URL)/termos)")
                                 .font(.caption)
                                 .foregroundStyle(Theme.subtleText)
                                 .tint(Theme.accentBlue)

@@ -156,7 +156,7 @@ struct ProfileView: View {
             }
 
             Button {
-                if let url = URL(string: "https://rork-rumo-agente.vercel.app/privacidade") {
+                if let url = URL(string: "\(Config.EXPO_PUBLIC_AGENT_BACKEND_URL)/privacidade") {
                     openURL(url)
                 }
             } label: {
@@ -178,7 +178,7 @@ struct ProfileView: View {
             }
 
             Button {
-                if let url = URL(string: "https://rork-rumo-agente.vercel.app/termos") {
+                if let url = URL(string: "\(Config.EXPO_PUBLIC_AGENT_BACKEND_URL)/termos") {
                     openURL(url)
                 }
             } label: {

@@ -82,8 +82,11 @@ app.post('/webhook/stripe', express.raw({ type: 'application/json' }), async (re
 
       if (credits) {
         const amount = parseInt(credits);
+        // Fetch current credits then add
+        const { data: profile } = await supabase
+          .from('profiles').select('credits').eq('user_id', userId).single();
         await supabase.from('profiles').update({
-          credits: supabase.rpc('increment_credits', { user_id: userId, amount })
+          credits: (profile?.credits || 0) + amount
         }).eq('user_id', userId);
         await supabase.from('credit_transactions').insert({
           user_id: userId, amount, type: 'purchase',
@@ -324,14 +327,13 @@ app.post('/chat', authenticateUser, rateLimiter(60000, 20), async (req, res) => 
       ]);
     }
 
-    // Debit credit (optimistic locking to prevent race condition)
-    const { data: updateResult } = await supabase.from('profiles')
-      .update({ credits: profile.credits - 1 })
-      .eq('user_id', userId)
-      .eq('credits', profile.credits);
-    if (!updateResult || updateResult.length === 0) {
-      console.warn(`[RACE] Credit deduction race detected for user ${userId.substring(0, 8)}`);
-    }
+    // Debit credit - refetch current credits to avoid stale data
+    const { data: freshProfile } = await supabase
+      .from('profiles').select('credits').eq('user_id', userId).single();
+    const currentCredits = freshProfile?.credits ?? profile.credits;
+    await supabase.from('profiles')
+      .update({ credits: Math.max(0, currentCredits - 1) })
+      .eq('user_id', userId);
 
     await supabase.from('credit_transactions').insert({
       user_id: userId, amount: -1, type: 'usage',
@@ -384,7 +386,13 @@ app.post('/execute', authenticateUser, rateLimiter(60000, 30), async (req, res) 
     if (action === 'type') {
       const text = String(parameters?.text || '');
       if (text.length > 500) return res.status(400).json({ error: 'Texto muito longo (max 500 chars)' });
-      args = ['exec', name, 'bash', '-c', `export DISPLAY=:1 && xdotool type --delay 50 -- '${text.replace(/'/g, "'\\''")}'`];
+      // Sanitize text for shell safety - use base64 for complex text
+      if (/[`$\\'";&|<>]/.test(text)) {
+        const b64 = Buffer.from(text).toString('base64');
+        args = ['exec', name, 'bash', '-c', `export DISPLAY=:1 && echo '${b64}' | base64 -d | xdotool type --delay 50 --clearmodifiers --file -`];
+      } else {
+        args = ['exec', name, 'bash', '-c', `export DISPLAY=:1 && xdotool type --delay 50 -- '${text}'`];
+      }
     } else if (action === 'click') {
       const x = parseInt(parameters?.x) || 640;
       const y = parseInt(parameters?.y) || 360;

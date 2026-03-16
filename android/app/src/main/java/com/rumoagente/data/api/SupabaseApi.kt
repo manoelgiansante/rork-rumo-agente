@@ -98,7 +98,7 @@ interface SupabaseApi {
 
     @DELETE
     suspend fun deleteAccount(
-        @Url url: String = "https://rork-rumo-agente.vercel.app/api/delete-account",
+        @Url url: String = "${Config.AGENT_URL}/api/delete-account",
         @Header("Authorization") authorization: String
     ): Response<Unit>
 }

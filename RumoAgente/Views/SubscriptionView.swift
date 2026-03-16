@@ -225,13 +225,50 @@ struct SubscriptionView: View {
     }
 
     private func subscribe(plan: SubscriptionPlan) async {
-        guard let webURL = URL(string: "https://rork-rumo-agente.vercel.app/#subscription") else { return }
-        openURL(webURL)
+        guard let token = supabase.authTokenValue else { return }
+        isProcessing = true
+        checkoutError = nil
+        do {
+            guard let url = URL(string: "\(Config.EXPO_PUBLIC_AGENT_BACKEND_URL)/create-checkout") else { return }
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            request.httpBody = try JSONSerialization.data(withJSONObject: ["plan": plan.rawValue])
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                checkoutError = "Erro ao criar checkout"
+                isProcessing = false
+                return
+            }
+            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            if let checkoutURL = json?["url"] as? String, let url = URL(string: checkoutURL) {
+                openURL(url)
+            }
+        } catch {
+            checkoutError = "Erro de conexão"
+        }
+        isProcessing = false
     }
 
     private func buyCredits(amount: Int) async {
-        guard let webURL = URL(string: "https://rork-rumo-agente.vercel.app/#subscription") else { return }
-        openURL(webURL)
+        guard let token = supabase.authTokenValue else { return }
+        do {
+            guard let url = URL(string: "\(Config.EXPO_PUBLIC_AGENT_BACKEND_URL)/buy-credits") else { return }
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            request.httpBody = try JSONSerialization.data(withJSONObject: ["amount": amount])
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else { return }
+            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            if let checkoutURL = json?["url"] as? String, let url = URL(string: checkoutURL) {
+                openURL(url)
+            }
+        } catch {
+            checkoutError = "Erro de conexão"
+        }
     }
 }
 

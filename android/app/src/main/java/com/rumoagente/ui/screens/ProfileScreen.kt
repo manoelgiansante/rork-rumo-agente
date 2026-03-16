@@ -1,5 +1,6 @@
 package com.rumoagente.ui.screens
 
+import com.rumoagente.data.api.Config
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -436,7 +437,7 @@ fun ProfileScreen(
                 icon = Icons.Default.Shield,
                 title = "Privacidade",
                 value = null,
-                onClick = { openUrl("https://rork-rumo-agente.vercel.app/privacidade") }
+                onClick = { openUrl("${Config.AGENT_URL}/privacidade") }
             )
         }
 
@@ -457,7 +458,7 @@ fun ProfileScreen(
                 icon = Icons.Default.Description,
                 title = "Termos de Uso",
                 value = null,
-                onClick = { openUrl("https://rork-rumo-agente.vercel.app/termos") }
+                onClick = { openUrl("${Config.AGENT_URL}/termos") }
             )
         }
 

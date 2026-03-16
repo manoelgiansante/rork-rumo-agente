@@ -370,7 +370,7 @@ class SupabaseService {
             throw ServiceError.authError("Usuário não autenticado")
         }
 
-        let url = URL(string: "https://rork-rumo-agente.vercel.app/api/delete-account")!
+        let url = URL(string: "\(Config.EXPO_PUBLIC_AGENT_BACKEND_URL)/api/delete-account")!
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

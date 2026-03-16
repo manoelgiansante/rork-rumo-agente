@@ -21,18 +21,22 @@ class ClaudeService {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
 
-        var history: [[String: String]] = []
-        for msg in conversationHistory.suffix(20) {
-            history.append([
+        var messages: [[String: String]] = []
+        for msg in conversationHistory.suffix(18) {
+            messages.append([
                 "role": msg.role == .user ? "user" : "assistant",
                 "content": msg.content
             ])
         }
+        // Add current user message
+        messages.append([
+            "role": "user",
+            "content": message
+        ])
 
         let body: [String: Any] = [
-            "message": message,
-            "appContext": appContext ?? "",
-            "history": history
+            "messages": messages,
+            "conversationId": NSNull()
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 

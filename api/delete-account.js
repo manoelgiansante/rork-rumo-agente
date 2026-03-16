@@ -14,6 +14,11 @@ export default async function handler(req, res) {
   try {
     // Delete user data from all related tables
     const tablesToDelete = [
+      'pending_confirmations',
+      'agent_action_log',
+      'learned_workflows',
+      'secure_credentials',
+      'agent_memory',
       'chat_messages',
       'conversations',
       'agent_tasks',
