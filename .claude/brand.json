@@ -1,0 +1,22 @@
+{
+  "brand": "AgroRumo",
+  "colors": {
+    "primary": "#2D5016",
+    "primaryName": "Verde AgroRumo",
+    "secondary": "#FDD835",
+    "secondaryName": "Amarelo AgroRumo",
+    "primaryLight": "#4A7A2E",
+    "primaryDark": "#1A3009",
+    "secondaryLight": "#FFEB3B",
+    "secondaryDark": "#F9A825",
+    "background": "#FFFFFF",
+    "surface": "#F5F5F5",
+    "text": "#1A1A1A",
+    "textOnPrimary": "#FFFFFF",
+    "textOnSecondary": "#1A1A1A"
+  },
+  "stores": {
+    "googlePlay": true,
+    "appStore": true
+  }
+}

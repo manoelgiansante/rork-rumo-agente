@@ -1,0 +1,28 @@
+{
+  "app": "rork-rumo-agente",
+  "stores": {
+    "googlePlay": {
+      "enabled": true,
+      "defaultLanguage": "pt-BR",
+      "additionalLanguages": ["en-US", "es-ES"],
+      "category": "BUSINESS"
+    },
+    "appStore": {
+      "enabled": true,
+      "primaryLocale": "pt-BR",
+      "additionalLocales": ["en-US", "es-419"],
+      "primaryCategory": "Business",
+      "secondaryCategory": "Productivity"
+    }
+  },
+  "brand": {
+    "primaryColor": "#2D5016",
+    "secondaryColor": "#FDD835",
+    "screenshotBackground": "#2D5016",
+    "screenshotAccent": "#FDD835"
+  },
+  "keywords": {
+    "pt-BR": ["agro", "fazenda", "pecuária", "agricultura", "gestão rural", "agronegócio"],
+    "en-US": ["agro", "farm", "livestock", "agriculture", "rural management", "agribusiness"]
+  }
+}
