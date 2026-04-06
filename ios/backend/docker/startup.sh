@@ -4,12 +4,12 @@ set -e
 # Clean stale VNC locks
 rm -f /tmp/.X1-lock /tmp/.X11-unix/X1
 
-# Ensure VNC password exists
-if [ ! -f "$HOME/.vnc/passwd" ]; then
-    mkdir -p "$HOME/.vnc"
-    echo "rumoagente" | tigervncpasswd -f > "$HOME/.vnc/passwd"
-    chmod 600 "$HOME/.vnc/passwd"
-fi
+# Set VNC password from env var (secure per-container password)
+mkdir -p "$HOME/.vnc"
+VNC_PASS="${VNC_PASSWORD:-$(openssl rand -base64 12)}"
+echo "$VNC_PASS" | tigervncpasswd -f > "$HOME/.vnc/passwd"
+chmod 600 "$HOME/.vnc/passwd"
+echo "VNC password configured"
 
 # Create proper xstartup that keeps running
 cat > "$HOME/.vnc/xstartup" << 'XEOF'

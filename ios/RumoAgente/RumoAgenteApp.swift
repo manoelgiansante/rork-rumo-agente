@@ -22,7 +22,15 @@ struct RumoAgenteApp: App {
             .animation(.snappy, value: supabase.isAuthenticated)
             .task {
                 await supabase.checkSession()
-                agentService.configure(baseURL: Config.EXPO_PUBLIC_AGENT_BACKEND_URL)
+                agentService.configure(
+                    baseURL: Config.EXPO_PUBLIC_AGENT_BACKEND_URL,
+                    token: supabase.authTokenValue
+                )
+            }
+            .onChange(of: supabase.isAuthenticated) { _, isAuth in
+                if isAuth {
+                    agentService.updateToken(supabase.authTokenValue)
+                }
             }
             .onOpenURL { url in
                 Task {

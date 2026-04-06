@@ -141,7 +141,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
           <span>Tela</span>
         </button>
-        <button class="sidebar-item" data-tab="chat" onclick="switchTab('chat')">
+        <button class="sidebar-item" data-tab="chat" onclick="switchTab('screen')" style="display:none">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
           <span>Chat</span>
         </button>
@@ -235,7 +235,7 @@
             <div class="q-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>
             Ver Tela
           </button>
-          <button class="quick-btn" onclick="switchTab('chat')">
+          <button class="quick-btn" onclick="switchTab('screen')">
             <div class="q-icon green"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg></div>
             Chat
           </button>
@@ -260,61 +260,64 @@
       </div>
     </div>
 
-    <!-- SCREEN -->
+    <!-- SCREEN + CHAT (combined) -->
     <div id="tab-screen" class="tab-panel">
-      <div class="tab-header">
-        <h2>Tela</h2>
-        <div class="screen-controls">
-          <span class="connection-status" id="connection-status">
-            <span class="status-dot red"></span> Desconectado
-          </span>
-          <button class="btn-icon" id="disconnect-btn" style="display:none" onclick="disconnectScreen()">Desconectar</button>
-          <button class="btn-fullscreen" onclick="toggleFullscreen()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-          </button>
-        </div>
-      </div>
-      <div class="screen-container" id="screen-container">
-        <div id="screen-placeholder" class="screen-placeholder">
-          <div class="pulse-circle"></div>
-          <div class="pulse-circle inner"></div>
-          <div class="screen-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      <div class="screen-chat-layout">
+        <!-- Screen Area -->
+        <div class="screen-area">
+          <div class="screen-area-header">
+            <div class="screen-area-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:16px;height:16px;opacity:0.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+              <span>Tela</span>
+            </div>
+            <div class="screen-controls">
+              <span class="connection-status" id="connection-status">
+                <span class="status-dot red"></span> Desconectado
+              </span>
+              <button class="btn-icon" id="disconnect-btn" style="display:none" onclick="disconnectScreen()">Desconectar</button>
+              <button class="btn-fullscreen" onclick="toggleFullscreen()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+              </button>
+            </div>
           </div>
-          <h3>Seu Computador na Nuvem</h3>
-          <p class="subtle">Desktop privado e isolado. Seus dados ficam seguros e separados.</p>
-          <button class="btn-primary" id="connect-btn" onclick="connectScreen()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>
-            Conectar
-          </button>
+          <div class="screen-monitor-frame">
+            <div class="screen-container" id="screen-container">
+              <div id="screen-placeholder" class="screen-placeholder">
+                <div class="pulse-circle"></div>
+                <div class="pulse-circle inner"></div>
+                <div class="screen-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                </div>
+                <h3>Seu Computador na Nuvem</h3>
+                <p class="subtle">Desktop privado e isolado. Seus dados ficam seguros e separados.</p>
+                <button class="btn-primary" id="connect-btn" onclick="connectScreen()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>
+                  Conectar
+                </button>
+              </div>
+              <img id="screen-image" class="screen-image" style="display:none" alt="Desktop Remoto">
+            </div>
+          </div>
         </div>
-        <img id="screen-image" class="screen-image" style="display:none" alt="Desktop Remoto">
-      </div>
-    </div>
 
-    <!-- CHAT -->
-    <div id="tab-chat" class="tab-panel">
-      <div class="chat-area">
-        <div class="tab-header"><h2>Agente IA</h2></div>
-        <div class="app-selector" id="app-selector"></div>
-        <div class="chat-messages" id="chat-messages">
-          <div class="message assistant">
-            <div class="bubble">Olá! Sou o Rumo Agente. Como posso ajudar você hoje?</div>
-            <span class="msg-time">Agora</span>
+        <!-- Chat Panel -->
+        <div class="chat-panel">
+          <div class="chat-panel-header">
+            <svg viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px;opacity:0.5"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+            <span>Agente IA</span>
           </div>
-        </div>
-        <div class="chat-input-bar">
-          <input type="text" id="chat-input" placeholder="Digite um comando..." onkeydown="if(event.key==='Enter')sendChat()">
-          <button class="send-btn" id="send-btn" onclick="sendChat()">
-            <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 16V8M8 12l4-4 4 4" fill="none" stroke="var(--dark-bg)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-        </div>
-      </div>
-      <div class="split-screen" id="split-screen">
-        <div class="split-screen-inner">
-          <img id="split-screen-image" class="screen-image" alt="Desktop">
-          <div class="split-screen-overlay">
-            <span class="status-dot green"></span> Desktop Ativo
+          <div class="app-selector" id="app-selector"></div>
+          <div class="chat-messages" id="chat-messages">
+            <div class="message assistant">
+              <div class="bubble">Olá! Sou o Rumo Agente. Como posso ajudar você hoje?</div>
+              <span class="msg-time">Agora</span>
+            </div>
+          </div>
+          <div class="chat-input-bar">
+            <input type="text" id="chat-input" placeholder="Digite um comando..." onkeydown="if(event.key==='Enter')sendChat()">
+            <button class="send-btn" id="send-btn" onclick="sendChat()">
+              <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 16V8M8 12l4-4 4 4" fill="none" stroke="var(--dark-bg)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
           </div>
         </div>
       </div>
@@ -439,7 +442,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
       <span class="tab-label">Tela</span>
     </button>
-    <button class="tab-item" data-tab="chat" onclick="switchTab('chat')">
+    <button class="tab-item" data-tab="chat" onclick="switchTab('screen')" style="display:none">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
       <span class="tab-label">Chat</span>
     </button>

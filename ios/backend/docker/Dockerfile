@@ -29,11 +29,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN useradd -m -s /bin/bash $USER && \
     echo "$USER ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-# Setup VNC password
+# VNC password directory (password is set at runtime via startup.sh)
 RUN mkdir -p $HOME/.vnc && \
-    bash -c 'echo "rumoagente" | tigervncpasswd -f > $HOME/.vnc/passwd' && \
-    chmod 600 $HOME/.vnc/passwd && \
     chown -R $USER:$USER $HOME
+
+# Healthcheck: verify VNC is responding
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD pgrep -x Xtigervnc > /dev/null || exit 1
 
 # VNC startup config
 RUN printf '#!/bin/bash\nunset SESSION_MANAGER\nunset DBUS_SESSION_BUS_ADDRESS\nexport XDG_SESSION_TYPE=x11\neval $(dbus-launch --sh-syntax)\nexec startxfce4\n' > $HOME/.vnc/xstartup && \
@@ -46,8 +48,8 @@ RUN chmod +x /tmp/setup-macos-theme.sh && \
     su - $USER -c "/tmp/setup-macos-theme.sh" && \
     rm /tmp/setup-macos-theme.sh
 
-# noVNC symlink
-RUN ln -sf /usr/share/novnc/vnc.html /usr/share/novnc/index.html 2>/dev/null || true
+# noVNC symlink (vnc_lite.html = cleaner UI without status bar)
+RUN ln -sf /usr/share/novnc/vnc_lite.html /usr/share/novnc/index.html 2>/dev/null || true
 
 COPY startup.sh /startup.sh
 RUN chmod +x /startup.sh

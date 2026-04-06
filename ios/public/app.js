@@ -363,14 +363,17 @@ function logout(skipConfirm) {
 // ============ NAVIGATION ============
 const tabTitles = {
   dashboard: 'Dashboard',
-  screen: 'Tela',
-  chat: 'Agente IA',
+  screen: 'Tela & Chat',
+  chat: 'Tela & Chat',
   apps: 'Apps',
   profile: 'Perfil'
 };
 
 function switchTab(name) {
   if (splitScreenInterval) { clearInterval(splitScreenInterval); splitScreenInterval = null; }
+
+  // Redirect chat tab to screen (chat is now embedded in screen tab)
+  if (name === 'chat') name = 'screen';
 
   const currentPanel = document.querySelector('.tab-panel.active');
   document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
@@ -391,14 +394,10 @@ function switchTab(name) {
   const topbarTitle = document.getElementById('topbar-title');
   if (topbarTitle) topbarTitle.textContent = tabTitles[name] || name;
 
-  if (name === 'chat') {
+  if (name === 'screen') {
     const input = document.getElementById('chat-input');
-    setTimeout(() => input.focus(), 150);
+    if (input) setTimeout(() => input.focus(), 150);
     scrollChat();
-    if (window.innerWidth >= 1024) {
-      fetchSplitScreenshot();
-      splitScreenInterval = setInterval(fetchSplitScreenshot, 2000);
-    }
   }
 
   triggerHaptic();
@@ -436,8 +435,11 @@ async function connectScreen() {
     });
     const statusData = await statusRes.json();
 
-    if (!statusData.desktop) {
-      // Start user's isolated desktop container
+    if (statusData.desktop && statusData.noVncUrl) {
+      // Desktop already running with known URL
+      noVncUrl = statusData.noVncUrl;
+    } else {
+      // Start (or re-detect) user's desktop container
       const startRes = await fetch(AGENT_URL + '/start-desktop', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + authToken }
@@ -460,9 +462,10 @@ async function connectScreen() {
       if (!iframe) {
         iframe = document.createElement('iframe');
         iframe.id = 'screen-iframe';
-        iframe.style.cssText = 'width:100%;height:100%;border:none;border-radius:12px;background:#000;';
+        iframe.style.cssText = 'width:100%;height:100%;border:none;background:#000;position:absolute;inset:0;';
         container.appendChild(iframe);
       }
+      // Use vnc_lite (no control bar/keyboard icon) and disable bell
       iframe.src = noVncUrl;
       iframe.style.display = 'block';
       document.getElementById('screen-image').style.display = 'none';

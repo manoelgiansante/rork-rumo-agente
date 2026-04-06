@@ -1,4 +1,5 @@
 import SwiftUI
+import StoreKit
 
 struct SubscriptionView: View {
     let supabase: SupabaseService
@@ -10,6 +11,8 @@ struct SubscriptionView: View {
     @State private var checkoutError: String?
     @State private var transactions: [Transaction] = []
     @State private var showTransactions = false
+    @State private var storeKit = StoreKitService()
+    @State private var isRestoring = false
 
     var body: some View {
         Group {
@@ -39,6 +42,7 @@ struct SubscriptionView: View {
                 usageOverview
                 plansSection
                 extraCreditsSection
+                restorePurchasesSection
                 featuresComparison
                 transactionHistorySection
             }
@@ -50,6 +54,7 @@ struct SubscriptionView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             transactions = await supabase.fetchTransactions()
+            await storeKit.loadProducts()
         }
     }
 
@@ -224,12 +229,85 @@ struct SubscriptionView: View {
         .padding(.vertical, 6)
     }
 
+    // MARK: - Restore Purchases Section (Apple requirement)
+    private var restorePurchasesSection: some View {
+        VStack(spacing: 12) {
+            Button {
+                Task {
+                    isRestoring = true
+                    await storeKit.restorePurchases()
+                    isRestoring = false
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    if isRestoring {
+                        ProgressView()
+                            .tint(Theme.accent)
+                    }
+                    Text("Restaurar Compras")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Theme.accent)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .background(Theme.accent.opacity(0.1), in: .rect(cornerRadius: 12))
+            }
+            .disabled(isRestoring)
+
+            if let error = storeKit.errorMessage {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+            }
+        }
+    }
+
     private func subscribe(plan: SubscriptionPlan) async {
+        isProcessing = true
+        checkoutError = nil
+        defer { isProcessing = false }
+
+        // Try StoreKit first (IAP)
+        if let product = storeKit.product(for: plan) {
+            do {
+                let transaction = try await storeKit.purchase(product)
+                if transaction != nil {
+                    // Successful purchase - sync with backend
+                    await supabase.fetchProfile()
+                    return
+                }
+            } catch {
+                checkoutError = error.localizedDescription
+                return
+            }
+        }
+
+        // Fallback to web checkout
         guard let webURL = URL(string: "https://rork-rumo-agente.vercel.app/#subscription") else { return }
         openURL(webURL)
     }
 
     private func buyCredits(amount: Int) async {
+        isProcessing = true
+        checkoutError = nil
+        defer { isProcessing = false }
+
+        // Try StoreKit first (IAP)
+        if let product = storeKit.creditProduct(amount: amount) {
+            do {
+                let transaction = try await storeKit.purchase(product)
+                if transaction != nil {
+                    await supabase.fetchProfile()
+                    return
+                }
+            } catch {
+                checkoutError = error.localizedDescription
+                return
+            }
+        }
+
+        // Fallback to web checkout
         guard let webURL = URL(string: "https://rork-rumo-agente.vercel.app/#subscription") else { return }
         openURL(webURL)
     }

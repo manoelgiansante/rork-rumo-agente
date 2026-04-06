@@ -12,6 +12,7 @@ struct ScreenView: View {
     @State private var lastZoomScale: CGFloat = 1.0
     @State private var offset: CGSize = .zero
     @State private var lastOffset: CGSize = .zero
+    @State private var consecutiveErrors = 0
 
     private let backendURL = Config.EXPO_PUBLIC_AGENT_BACKEND_URL
 
@@ -142,6 +143,17 @@ struct ScreenView: View {
                     .font(.caption2)
                     .foregroundStyle(.red)
                     .lineLimit(1)
+
+                if !isConnected {
+                    Button { connect() } label: {
+                        Text("Reconectar")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(Theme.accent)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Theme.accent.opacity(0.15), in: .capsule)
+                    }
+                }
             }
 
             Spacer()
@@ -280,6 +292,7 @@ struct ScreenView: View {
 
     private func startRefreshing(token: String) {
         refreshTask?.cancel()
+        consecutiveErrors = 0
         refreshTask = Task {
             while !Task.isCancelled {
                 await fetchScreenshot(token: token)
@@ -292,22 +305,46 @@ struct ScreenView: View {
         guard let url = URL(string: "\(backendURL)/screenshot") else { return }
         var request = URLRequest(url: url)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.timeoutInterval = 10
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse else { return }
 
             if httpResponse.statusCode == 401 {
+                // Try refreshing token before disconnecting
+                if await supabase.refreshSession(), let newToken = supabase.authTokenValue {
+                    startRefreshing(token: newToken)
+                    return
+                }
                 errorMessage = "Sessão expirada"
                 disconnect()
+                return
+            }
+
+            if httpResponse.statusCode == 404 {
+                // Desktop not running — auto-reconnect
+                consecutiveErrors += 1
+                if consecutiveErrors >= 3 {
+                    errorMessage = "Desktop parou. Reconectando..."
+                    refreshTask?.cancel()
+                    try? await Task.sleep(for: .seconds(2))
+                    connect()
+                }
                 return
             }
 
             guard httpResponse.statusCode == 200,
                   let image = UIImage(data: data) else { return }
             screenImage = image
+            consecutiveErrors = 0 // Reset on success
+            errorMessage = nil
         } catch {
-            // Network error during screenshot fetch — will retry on next cycle
+            consecutiveErrors += 1
+            if consecutiveErrors >= 5 {
+                errorMessage = "Conexão instável. Verifique sua internet."
+            }
+            // Will retry on next cycle
         }
     }
 }

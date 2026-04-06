@@ -90,31 +90,31 @@ ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE credit_transactions ENABLE ROW LEVEL SECURITY;
 
 -- Agent Tasks
-CREATE POLICY "Users can view own tasks" ON agent_tasks FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert own tasks" ON agent_tasks FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can update own tasks" ON agent_tasks FOR UPDATE USING (auth.uid() = user_id);
+DO $$ BEGIN CREATE POLICY "Users can view own tasks" ON agent_tasks FOR SELECT USING (auth.uid() = user_id); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE POLICY "Users can insert own tasks" ON agent_tasks FOR INSERT WITH CHECK (auth.uid() = user_id); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE POLICY "Users can update own tasks" ON agent_tasks FOR UPDATE USING (auth.uid() = user_id); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Conversations
-CREATE POLICY "Users can view own conversations" ON conversations FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert own conversations" ON conversations FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can delete own conversations" ON conversations FOR DELETE USING (auth.uid() = user_id);
+DO $$ BEGIN CREATE POLICY "Users can view own conversations" ON conversations FOR SELECT USING (auth.uid() = user_id); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE POLICY "Users can insert own conversations" ON conversations FOR INSERT WITH CHECK (auth.uid() = user_id); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE POLICY "Users can delete own conversations" ON conversations FOR DELETE USING (auth.uid() = user_id); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Chat Messages
-CREATE POLICY "Users can view own messages" ON chat_messages FOR SELECT USING (
+DO $$ BEGIN CREATE POLICY "Users can view own messages" ON chat_messages FOR SELECT USING (
   conversation_id IN (SELECT id FROM conversations WHERE user_id = auth.uid())
-);
-CREATE POLICY "Users can insert own messages" ON chat_messages FOR INSERT WITH CHECK (
+); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE POLICY "Users can insert own messages" ON chat_messages FOR INSERT WITH CHECK (
   conversation_id IN (SELECT id FROM conversations WHERE user_id = auth.uid())
-);
+); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Cloud Apps (catálogo público)
-CREATE POLICY "Anyone can view apps" ON cloud_apps FOR SELECT USING (true);
+DO $$ BEGIN CREATE POLICY "Anyone can view apps" ON cloud_apps FOR SELECT USING (true); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Subscriptions
-CREATE POLICY "Users can view own subscription" ON subscriptions FOR SELECT USING (auth.uid() = user_id);
+DO $$ BEGIN CREATE POLICY "Users can view own subscription" ON subscriptions FOR SELECT USING (auth.uid() = user_id); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Credit Transactions
-CREATE POLICY "Users can view own transactions" ON credit_transactions FOR SELECT USING (auth.uid() = user_id);
+DO $$ BEGIN CREATE POLICY "Users can view own transactions" ON credit_transactions FOR SELECT USING (auth.uid() = user_id); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ============================================
 -- TRIGGER: criar perfil ao registrar (se não existir)
@@ -131,7 +131,8 @@ BEGIN
     NEW.raw_user_meta_data->>'avatar_url',
     'free',
     10
-  );
+  )
+  ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -155,4 +156,5 @@ INSERT INTO cloud_apps (name, icon_name, status, category) VALUES
   ('WhatsApp Web', 'message.fill', 'installed', 'Comunicação'),
   ('Slack', 'bubble.left.and.bubble.right.fill', 'not_installed', 'Comunicação'),
   ('Siagri', 'building.2.fill', 'installed', 'Agronegócio'),
-  ('Totvs Agro', 'tractor.fill', 'not_installed', 'Agronegócio');
+  ('Totvs Agro', 'tractor.fill', 'not_installed', 'Agronegócio')
+ON CONFLICT DO NOTHING;

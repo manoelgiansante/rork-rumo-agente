@@ -28,6 +28,9 @@ class ChatViewModel {
         ]
     }
 
+    private var retryCount = 0
+    private let maxRetries = 2
+
     func sendMessage() async {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
@@ -38,28 +41,53 @@ class ChatViewModel {
         inputText = ""
         isTyping = true
         errorMessage = nil
+        retryCount = 0
 
+        await sendWithRetry(text: text, history: historySnapshot)
+
+        isTyping = false
+    }
+
+    private func sendWithRetry(text: String, history: [ChatMessage]) async {
         do {
             let response = try await claudeService.sendCommand(
                 message: text,
                 appContext: selectedApp?.name,
-                conversationHistory: historySnapshot,
+                conversationHistory: history,
                 authToken: supabase.authTokenValue
             )
             messages.append(response)
         } catch let error as ServiceError {
-            errorMessage = error.localizedDescription
-            let errorText: String
             switch error {
-            case .networkError:
-                errorText = "Sem conexão com a internet. Verifique sua rede e tente novamente."
+            case .networkError where retryCount < maxRetries:
+                retryCount += 1
+                errorMessage = "Tentando novamente... (\(retryCount)/\(maxRetries))"
+                try? await Task.sleep(for: .seconds(Double(retryCount) * 2))
+                await sendWithRetry(text: text, history: history)
+                return
             case .authError:
-                errorText = "Sessão expirada. Faça login novamente."
+                // Try refreshing session
+                if await supabase.refreshSession() {
+                    await sendWithRetry(text: text, history: history)
+                    return
+                }
+                errorMessage = error.localizedDescription
+                messages.append(ChatMessage(role: .assistant, content: "Sessão expirada. Faça login novamente.", createdAt: Date()))
+            case .networkError:
+                errorMessage = error.localizedDescription
+                messages.append(ChatMessage(role: .assistant, content: "Sem conexão com a internet. Verifique sua rede e tente novamente.", createdAt: Date()))
             default:
-                errorText = "Desculpe, ocorreu um erro ao processar seu comando. Tente novamente."
+                errorMessage = error.localizedDescription
+                messages.append(ChatMessage(role: .assistant, content: "Desculpe, ocorreu um erro ao processar seu comando. Tente novamente.", createdAt: Date()))
             }
-            messages.append(ChatMessage(role: .assistant, content: errorText, createdAt: Date()))
         } catch {
+            if retryCount < maxRetries {
+                retryCount += 1
+                errorMessage = "Tentando novamente... (\(retryCount)/\(maxRetries))"
+                try? await Task.sleep(for: .seconds(Double(retryCount) * 2))
+                await sendWithRetry(text: text, history: history)
+                return
+            }
             errorMessage = error.localizedDescription
             messages.append(ChatMessage(
                 role: .assistant,
@@ -67,8 +95,6 @@ class ChatViewModel {
                 createdAt: Date()
             ))
         }
-
-        isTyping = false
     }
 
     func confirmAction() async {

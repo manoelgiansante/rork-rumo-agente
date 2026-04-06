@@ -331,7 +331,17 @@ class SupabaseService {
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else { return }
+            guard let httpResponse = response as? HTTPURLResponse else { return }
+
+            // Auto-refresh token on 401
+            if httpResponse.statusCode == 401 {
+                if await refreshSession() {
+                    await fetchProfile() // Retry with new token
+                }
+                return
+            }
+
+            guard httpResponse.statusCode == 200 else { return }
 
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
@@ -355,7 +365,14 @@ class SupabaseService {
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else { return [] }
+            guard let httpResponse = response as? HTTPURLResponse else { return [] }
+
+            if httpResponse.statusCode == 401 {
+                if await refreshSession() { return await fetchTasks() }
+                return []
+            }
+
+            guard httpResponse.statusCode == 200 else { return [] }
 
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
@@ -404,7 +421,14 @@ class SupabaseService {
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else { return [] }
+            guard let httpResponse = response as? HTTPURLResponse else { return [] }
+
+            if httpResponse.statusCode == 401 {
+                if await refreshSession() { return await fetchTransactions() }
+                return []
+            }
+
+            guard httpResponse.statusCode == 200 else { return [] }
 
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
@@ -425,7 +449,14 @@ class SupabaseService {
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else { return [] }
+            guard let httpResponse = response as? HTTPURLResponse else { return [] }
+
+            if httpResponse.statusCode == 401 {
+                if await refreshSession() { return await fetchApps() }
+                return []
+            }
+
+            guard httpResponse.statusCode == 200 else { return [] }
 
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601

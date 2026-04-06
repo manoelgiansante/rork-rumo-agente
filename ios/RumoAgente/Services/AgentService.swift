@@ -7,13 +7,30 @@ class AgentService {
     var lastError: String?
 
     private var agentBaseURL: String = ""
+    private var authToken: String?
 
-    func configure(baseURL: String) {
+    func configure(baseURL: String, token: String? = nil) {
         self.agentBaseURL = baseURL
+        self.authToken = token
+    }
+
+    func updateToken(_ token: String?) {
+        self.authToken = token
     }
 
     var isConfigured: Bool {
         !agentBaseURL.isEmpty
+    }
+
+    private func authorizedRequest(url: URL, method: String = "GET") -> URLRequest {
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 120
+        if let token = authToken {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        return request
     }
 
     func executeCommand(_ command: AgentCommand) async throws -> AgentResult {
@@ -26,10 +43,7 @@ class AgentService {
         }
 
         let url = URL(string: "\(agentBaseURL)/execute")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 120
+        var request = authorizedRequest(url: url, method: "POST")
 
         let encoder = JSONEncoder()
         request.httpBody = try encoder.encode(command)
@@ -50,7 +64,8 @@ class AgentService {
         guard let url = URL(string: "\(agentBaseURL)/status") else { return false }
 
         do {
-            let (_, response) = try await URLSession.shared.data(from: url)
+            let request = authorizedRequest(url: url)
+            let (_, response) = try await URLSession.shared.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse else { return false }
             return httpResponse.statusCode == 200
         } catch {
@@ -61,7 +76,8 @@ class AgentService {
     func takeScreenshot() async throws -> String? {
         guard isConfigured else { return nil }
         let url = URL(string: "\(agentBaseURL)/screenshot")!
-        let (data, response) = try await URLSession.shared.data(from: url)
+        let request = authorizedRequest(url: url)
+        let (data, response) = try await URLSession.shared.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else { return nil }
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
         return json?["screenshot_url"] as? String

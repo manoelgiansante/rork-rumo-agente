@@ -3,6 +3,52 @@
 -- Cole tudo isso no SQL Editor do Supabase
 -- ============================================
 
+-- 1. Tabela de perfis (OBRIGATÓRIA - referenciada pelo trigger de novos usuários)
+CREATE TABLE IF NOT EXISTS profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id UUID GENERATED ALWAYS AS (id) STORED,
+  email TEXT NOT NULL,
+  display_name TEXT,
+  avatar_url TEXT,
+  plan TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'starter', 'pro', 'enterprise')),
+  credits INTEGER NOT NULL DEFAULT 10,
+  stripe_customer_id TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_profiles_user_id ON profiles(id);
+CREATE INDEX IF NOT EXISTS idx_profiles_email ON profiles(email);
+
+-- RLS for profiles
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "System can insert profiles" ON profiles FOR INSERT WITH CHECK (true);
+
+-- 1.5 Atomic credit decrement function (prevents race conditions)
+CREATE OR REPLACE FUNCTION decrement_credits(p_user_id UUID, p_amount INTEGER)
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  new_credits INTEGER;
+BEGIN
+  UPDATE profiles
+  SET credits = GREATEST(credits - p_amount, 0),
+      updated_at = now()
+  WHERE id = p_user_id AND credits >= p_amount
+  RETURNING credits INTO new_credits;
+
+  IF NOT FOUND THEN
+    RETURN -1; -- Insufficient credits
+  END IF;
+
+  RETURN new_credits;
+END;
+$$;
+
 -- 2. Tabela de tarefas do agente
 CREATE TABLE IF NOT EXISTS agent_tasks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -131,7 +177,8 @@ BEGIN
     NEW.raw_user_meta_data->>'avatar_url',
     'free',
     10
-  );
+  )
+  ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
