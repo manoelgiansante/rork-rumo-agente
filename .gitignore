@@ -1,3 +1,18 @@
 node_modules
 .env
+.env.local
 .expo
+.claude/
+.vercel/
+
+# Legacy duplicate folders (project moved to ios/)
+/RumoAgente/
+/RumoAgente.xcodeproj/
+/backend/
+/supabase/
+
+# Fix/test scripts
+fix-*.py
+patch-*.py
+test-*.js
+vultr-login.js
