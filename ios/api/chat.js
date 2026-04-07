@@ -1,11 +1,13 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 
-const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
-);
+const { CLAUDE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY } = process.env;
+if (!CLAUDE_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+  throw new Error("Missing required env vars: CLAUDE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY");
+}
+
+const anthropic = new Anthropic({ apiKey: CLAUDE_API_KEY });
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 export default async function handler(req, res) {
   if (req.method !== "POST")
@@ -82,6 +84,26 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: "Sem créditos disponíveis" });
     }
 
+    // Debit credit BEFORE the LLM call to prevent free usage on debit failure
+    const { error: rpcError } = await supabase.rpc("decrement_credits", {
+      p_user_id: user.id,
+      p_amount: 1,
+    });
+    if (rpcError) {
+      // Fallback to optimistic update
+      await supabase
+        .from("profiles")
+        .update({ credits: Math.max(0, profile.credits - 1) })
+        .eq("user_id", user.id);
+    }
+
+    await supabase.from("credit_transactions").insert({
+      user_id: user.id,
+      amount: -1,
+      type: "usage",
+      description: "Mensagem de chat",
+    });
+
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 2048,
@@ -106,26 +128,6 @@ export default async function handler(req, res) {
         },
       ]);
     }
-
-    // Debit credit atomically
-    const { error: rpcError } = await supabase.rpc("decrement_credits", {
-      p_user_id: user.id,
-      p_amount: 1,
-    });
-    if (rpcError) {
-      // Fallback to optimistic update
-      await supabase
-        .from("profiles")
-        .update({ credits: Math.max(0, profile.credits - 1) })
-        .eq("user_id", user.id);
-    }
-
-    await supabase.from("credit_transactions").insert({
-      user_id: user.id,
-      amount: -1,
-      type: "usage",
-      description: "Mensagem de chat",
-    });
 
     res.json({ message: assistantMessage });
   } catch (err) {

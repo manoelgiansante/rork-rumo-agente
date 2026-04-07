@@ -11,7 +11,9 @@ class ClaudeService {
         isProcessing = true
         defer { isProcessing = false }
 
-        let url = URL(string: "\(backendURL)/chat")!
+        guard let url = URL(string: "\(backendURL)/chat") else {
+            throw ServiceError.invalidResponse
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

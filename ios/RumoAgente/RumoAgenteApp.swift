@@ -38,13 +38,18 @@ struct RumoAgenteApp: App {
                     do {
                         try await supabase.handleOAuthCallback(url: url)
                     } catch {
+                        #if DEBUG
                         print("[OAuth] Callback error: \(error.localizedDescription)")
+                        #endif
                     }
                 }
             }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active {
-                    Task { await supabase.checkSession() }
+                    Task {
+                        await supabase.checkSession()
+                        agentService.updateToken(supabase.authTokenValue)
+                    }
                 }
             }
         }

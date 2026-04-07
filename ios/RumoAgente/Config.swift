@@ -13,13 +13,13 @@ enum Config {
     static let EXPO_PUBLIC_AGENT_BACKEND_URL = "https://vps.agrorumo.com"
 
     // MARK: - Vercel API
-    static let VERCEL_API_URL = "https://rork-rumo-agente.vercel.app/api"
+    static let VERCEL_API_URL = "https://agente.agrorumo.com/api"
 
     // MARK: - App Store Product IDs
     static let appStoreSubscriptionGroupID = "rumoagente_subscriptions"
 
     // MARK: - App Info
     static let appBundleID = "app.rork.rumoagente"
-    static let privacyPolicyURL = URL(string: "https://rork-rumo-agente.vercel.app/privacidade.html")!
-    static let termsOfServiceURL = URL(string: "https://rork-rumo-agente.vercel.app/termos.html")!
+    static let privacyPolicyURL = URL(string: "https://agente.agrorumo.com/privacidade")!
+    static let termsOfServiceURL = URL(string: "https://agente.agrorumo.com/termos")!
 }

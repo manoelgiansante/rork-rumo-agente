@@ -28,7 +28,6 @@ class ChatViewModel {
         ]
     }
 
-    private var retryCount = 0
     private let maxRetries = 2
 
     func sendMessage() async {
@@ -41,14 +40,13 @@ class ChatViewModel {
         inputText = ""
         isTyping = true
         errorMessage = nil
-        retryCount = 0
 
-        await sendWithRetry(text: text, history: historySnapshot)
+        await sendWithRetry(text: text, history: historySnapshot, attempt: 0, didRefreshAuth: false)
 
         isTyping = false
     }
 
-    private func sendWithRetry(text: String, history: [ChatMessage]) async {
+    private func sendWithRetry(text: String, history: [ChatMessage], attempt: Int, didRefreshAuth: Bool) async {
         do {
             let response = try await claudeService.sendCommand(
                 message: text,
@@ -56,19 +54,20 @@ class ChatViewModel {
                 conversationHistory: history,
                 authToken: supabase.authTokenValue
             )
+            errorMessage = nil
             messages.append(response)
         } catch let error as ServiceError {
             switch error {
-            case .networkError where retryCount < maxRetries:
-                retryCount += 1
-                errorMessage = "Tentando novamente... (\(retryCount)/\(maxRetries))"
-                try? await Task.sleep(for: .seconds(Double(retryCount) * 2))
-                await sendWithRetry(text: text, history: history)
+            case .networkError where attempt < maxRetries:
+                let nextAttempt = attempt + 1
+                errorMessage = "Tentando novamente... (\(nextAttempt)/\(maxRetries))"
+                try? await Task.sleep(for: .seconds(Double(nextAttempt) * 2))
+                await sendWithRetry(text: text, history: history, attempt: nextAttempt, didRefreshAuth: didRefreshAuth)
                 return
-            case .authError:
-                // Try refreshing session
+            case .authError where !didRefreshAuth:
+                // Try refreshing session once only
                 if await supabase.refreshSession() {
-                    await sendWithRetry(text: text, history: history)
+                    await sendWithRetry(text: text, history: history, attempt: attempt, didRefreshAuth: true)
                     return
                 }
                 errorMessage = error.localizedDescription
@@ -81,11 +80,11 @@ class ChatViewModel {
                 messages.append(ChatMessage(role: .assistant, content: "Desculpe, ocorreu um erro ao processar seu comando. Tente novamente.", createdAt: Date()))
             }
         } catch {
-            if retryCount < maxRetries {
-                retryCount += 1
-                errorMessage = "Tentando novamente... (\(retryCount)/\(maxRetries))"
-                try? await Task.sleep(for: .seconds(Double(retryCount) * 2))
-                await sendWithRetry(text: text, history: history)
+            if attempt < maxRetries {
+                let nextAttempt = attempt + 1
+                errorMessage = "Tentando novamente... (\(nextAttempt)/\(maxRetries))"
+                try? await Task.sleep(for: .seconds(Double(nextAttempt) * 2))
+                await sendWithRetry(text: text, history: history, attempt: nextAttempt, didRefreshAuth: didRefreshAuth)
                 return
             }
             errorMessage = error.localizedDescription

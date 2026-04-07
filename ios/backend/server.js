@@ -12,6 +12,15 @@ const desktopAgent = require("./desktop-agent");
 const agentMemory = require("./agent-memory");
 
 const app = express();
+
+// Validate required environment variables at startup
+const REQUIRED_ENV = ["SUPABASE_URL", "SUPABASE_SERVICE_KEY"];
+const missingEnv = REQUIRED_ENV.filter((key) => !process.env[key]);
+if (missingEnv.length > 0) {
+  console.error(`FATAL: Missing required env vars: ${missingEnv.join(", ")}`);
+  process.exit(1);
+}
+
 const stripe = process.env.STRIPE_SECRET_KEY
   ? Stripe(process.env.STRIPE_SECRET_KEY)
   : null;
@@ -22,6 +31,9 @@ const supabase = createClient(
 
 // Gemini API (free tier)
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+if (!GEMINI_API_KEY) {
+  console.warn("WARNING: GEMINI_API_KEY not set — /chat endpoint will fail");
+}
 const GEMINI_MODEL = "gemini-2.5-flash";
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 

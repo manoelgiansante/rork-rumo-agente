@@ -284,8 +284,9 @@ struct SubscriptionView: View {
         }
 
         // Fallback to web checkout
-        guard let webURL = URL(string: "https://rork-rumo-agente.vercel.app/#subscription") else { return }
-        openURL(webURL)
+        if let webURL = URL(string: "https://agente.agrorumo.com/#subscription") {
+            openURL(webURL)
+        }
     }
 
     private func buyCredits(amount: Int) async {
@@ -308,8 +309,9 @@ struct SubscriptionView: View {
         }
 
         // Fallback to web checkout
-        guard let webURL = URL(string: "https://rork-rumo-agente.vercel.app/#subscription") else { return }
-        openURL(webURL)
+        if let webURL = URL(string: "https://agente.agrorumo.com/#subscription") {
+            openURL(webURL)
+        }
     }
 }
 

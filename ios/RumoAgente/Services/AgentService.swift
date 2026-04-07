@@ -42,7 +42,9 @@ class AgentService {
             throw AgentError.notConfigured
         }
 
-        let url = URL(string: "\(agentBaseURL)/execute")!
+        guard let url = URL(string: "\(agentBaseURL)/execute") else {
+            throw AgentError.executionFailed("Invalid URL")
+        }
         var request = authorizedRequest(url: url, method: "POST")
 
         let encoder = JSONEncoder()
@@ -75,7 +77,7 @@ class AgentService {
 
     func takeScreenshot() async throws -> String? {
         guard isConfigured else { return nil }
-        let url = URL(string: "\(agentBaseURL)/screenshot")!
+        guard let url = URL(string: "\(agentBaseURL)/screenshot") else { return nil }
         let request = authorizedRequest(url: url)
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else { return nil }

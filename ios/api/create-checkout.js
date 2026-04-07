@@ -1,8 +1,13 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+const { STRIPE_SECRET_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY } = process.env;
+if (!STRIPE_SECRET_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+  throw new Error('Missing required env vars: STRIPE_SECRET_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY');
+}
+
+const stripe = new Stripe(STRIPE_SECRET_KEY);
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -33,8 +38,8 @@ export default async function handler(req, res) {
         },
         quantity: 1,
       }],
-      success_url: 'https://rork-rumo-agente.vercel.app/success?session_id={CHECKOUT_SESSION_ID}',
-      cancel_url: 'https://rork-rumo-agente.vercel.app/cancel',
+      success_url: 'https://agente.agrorumo.com/success?session_id={CHECKOUT_SESSION_ID}',
+      cancel_url: 'https://agente.agrorumo.com/cancel',
     });
 
     res.json({ url: session.url, sessionId: session.id });

@@ -967,7 +967,7 @@ function incrementCreditsUsed() {
 async function deleteAccount() {
   if (!confirm('Tem certeza? Esta ação é irreversível e todos os seus dados serão excluídos permanentemente.')) return;
   try {
-    const res = await fetch('https://rork-rumo-agente.vercel.app/api/delete-account', {
+    const res = await fetch('https://agente.agrorumo.com/api/delete-account', {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',

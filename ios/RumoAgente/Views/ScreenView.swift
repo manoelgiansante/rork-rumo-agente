@@ -240,7 +240,12 @@ struct ScreenView: View {
                 let desktopRunning = statusJson?["desktop"] as? Bool ?? false
 
                 if !desktopRunning {
-                    var startReq = URLRequest(url: URL(string: "\(backendURL)/start-desktop")!)
+                    guard let startURL = URL(string: "\(backendURL)/start-desktop") else {
+                        errorMessage = "URL inválida"
+                        isLoading = false
+                        return
+                    }
+                    var startReq = URLRequest(url: startURL)
                     startReq.httpMethod = "POST"
                     startReq.setValue("application/json", forHTTPHeaderField: "Content-Type")
                     startReq.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -275,7 +280,8 @@ struct ScreenView: View {
 
         if let token = supabase.authTokenValue {
             Task {
-                var req = URLRequest(url: URL(string: "\(backendURL)/stop-desktop")!)
+                guard let stopURL = URL(string: "\(backendURL)/stop-desktop") else { return }
+                var req = URLRequest(url: stopURL)
                 req.httpMethod = "POST"
                 req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
                 _ = try? await URLSession.shared.data(for: req)
@@ -284,6 +290,7 @@ struct ScreenView: View {
 
         isConnected = false
         screenImage = nil
+        consecutiveErrors = 0
         zoomScale = 1.0
         lastZoomScale = 1.0
         offset = .zero

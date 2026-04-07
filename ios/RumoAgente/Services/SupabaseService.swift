@@ -14,6 +14,14 @@ class SupabaseService {
         self.anonKey = Config.EXPO_PUBLIC_SUPABASE_ANON_KEY
     }
 
+    /// Safe URL builder — throws if the URL string is malformed
+    private func makeURL(_ path: String) throws -> URL {
+        guard let url = URL(string: "\(baseURL)\(path)") else {
+            throw ServiceError.networkError
+        }
+        return url
+    }
+
     var authTokenValue: String? {
         KeychainService.load(key: "auth_token")
     }
@@ -41,7 +49,7 @@ class SupabaseService {
     }
 
     func signUp(email: String, password: String, displayName: String) async throws {
-        let url = URL(string: "\(baseURL)/auth/v1/signup")!
+        let url = try makeURL("/auth/v1/signup")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -79,7 +87,7 @@ class SupabaseService {
     }
 
     func signIn(email: String, password: String) async throws {
-        let url = URL(string: "\(baseURL)/auth/v1/token?grant_type=password")!
+        let url = try makeURL("/auth/v1/token?grant_type=password")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -131,7 +139,7 @@ class SupabaseService {
 
     func refreshSession() async -> Bool {
         guard let token = refreshToken else { return false }
-        let url = URL(string: "\(baseURL)/auth/v1/token?grant_type=refresh_token")!
+        let url = try makeURL("/auth/v1/token?grant_type=refresh_token")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -158,7 +166,7 @@ class SupabaseService {
 
     private func loadUserProfile() async {
         guard let token = authToken else { return }
-        let url = URL(string: "\(baseURL)/auth/v1/user")!
+        let url = try makeURL("/auth/v1/user")
         var request = URLRequest(url: url)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue(anonKey, forHTTPHeaderField: "apikey")
@@ -197,7 +205,7 @@ class SupabaseService {
     }
 
     func signInWithAppleToken(idToken: String, nonce: String, fullName: String?) async throws {
-        let url = URL(string: "\(baseURL)/auth/v1/token?grant_type=id_token")!
+        let url = try makeURL("/auth/v1/token?grant_type=id_token")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -266,7 +274,7 @@ class SupabaseService {
     }
 
     private func exchangeCodeForSession(code: String) async throws {
-        let url = URL(string: "\(baseURL)/auth/v1/token?grant_type=authorization_code")!
+        let url = try makeURL("/auth/v1/token?grant_type=authorization_code")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -291,7 +299,7 @@ class SupabaseService {
 
     private func updateUserMetadata(displayName: String) async throws {
         guard let token = authToken else { return }
-        let url = URL(string: "\(baseURL)/auth/v1/user")!
+        let url = try makeURL("/auth/v1/user")
         var request = URLRequest(url: url)
         request.httpMethod = "PUT"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -305,7 +313,7 @@ class SupabaseService {
     }
 
     func resetPassword(email: String) async throws {
-        let url = URL(string: "\(baseURL)/auth/v1/recover")!
+        let url = try makeURL("/auth/v1/recover")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -398,7 +406,9 @@ class SupabaseService {
             throw ServiceError.authError("Usuário não autenticado")
         }
 
-        let url = URL(string: "\(Config.VERCEL_API_URL)/delete-account")!
+        guard let url = URL(string: "\(Config.VERCEL_API_URL)/delete-account") else {
+            throw ServiceError.networkError
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

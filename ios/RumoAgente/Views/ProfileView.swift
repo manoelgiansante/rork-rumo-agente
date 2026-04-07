@@ -156,9 +156,7 @@ struct ProfileView: View {
             }
 
             Button {
-                if let url = URL(string: "https://rork-rumo-agente.vercel.app/privacidade") {
-                    openURL(url)
-                }
+                openURL(Config.privacyPolicyURL)
             } label: {
                 SettingsRowContent(icon: "lock.shield.fill", title: "Privacidade", value: nil)
             }
@@ -178,9 +176,7 @@ struct ProfileView: View {
             }
 
             Button {
-                if let url = URL(string: "https://rork-rumo-agente.vercel.app/termos") {
-                    openURL(url)
-                }
+                openURL(Config.termsOfServiceURL)
             } label: {
                 SettingsRowContent(icon: "doc.text", title: "Termos de Uso", value: nil)
             }

@@ -1,11 +1,13 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
-);
+const { STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SUPABASE_URL, SUPABASE_SERVICE_KEY } = process.env;
+if (!STRIPE_SECRET_KEY || !STRIPE_WEBHOOK_SECRET || !SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+  throw new Error("Missing required env vars: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SUPABASE_URL, SUPABASE_SERVICE_KEY");
+}
+
+const stripe = new Stripe(STRIPE_SECRET_KEY);
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 export const config = {
   api: { bodyParser: false },
@@ -34,7 +36,7 @@ export default async function handler(req, res) {
     event = stripe.webhooks.constructEvent(
       buf,
       sig,
-      process.env.STRIPE_WEBHOOK_SECRET,
+      STRIPE_WEBHOOK_SECRET,
     );
   } catch (err) {
     console.error("Webhook signature failed:", err.message);
@@ -61,15 +63,28 @@ export default async function handler(req, res) {
 
       if (credits) {
         const amount = parseInt(credits);
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("credits")
-          .eq("user_id", userId)
-          .single();
-        await supabase
-          .from("profiles")
-          .update({ credits: (profile?.credits || 0) + amount })
-          .eq("user_id", userId);
+        if (isNaN(amount) || amount <= 0) {
+          console.error("Invalid credits amount:", credits);
+          break;
+        }
+        // Atomic credit increment via RPC
+        const { error: rpcError } = await supabase.rpc("increment_credits", {
+          p_user_id: userId,
+          p_amount: amount,
+        });
+        if (rpcError) {
+          // Fallback: read-then-update (less safe but better than failing silently)
+          console.error("RPC increment_credits failed, using fallback:", rpcError.message);
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("credits")
+            .eq("user_id", userId)
+            .single();
+          await supabase
+            .from("profiles")
+            .update({ credits: (profile?.credits || 0) + amount })
+            .eq("user_id", userId);
+        }
         await supabase.from("credit_transactions").insert({
           user_id: userId,
           amount,
