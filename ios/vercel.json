@@ -8,10 +8,7 @@
     }
   },
   "rewrites": [
-    { "source": "/app.js", "destination": "/public/app.js" },
-    { "source": "/styles.css", "destination": "/public/styles.css" },
-    { "source": "/privacidade", "destination": "/public/privacidade.html" },
-    { "source": "/termos", "destination": "/public/termos.html" },
-    { "source": "/", "destination": "/public/index.html" }
+    { "source": "/privacidade", "destination": "/privacidade.html" },
+    { "source": "/termos", "destination": "/termos.html" }
   ]
 }
