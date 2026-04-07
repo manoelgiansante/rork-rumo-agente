@@ -3,7 +3,9 @@ import { createClient } from "@supabase/supabase-js";
 
 const { CLAUDE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY } = process.env;
 if (!CLAUDE_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-  throw new Error("Missing required env vars: CLAUDE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY");
+  throw new Error(
+    "Missing required env vars: CLAUDE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY",
+  );
 }
 
 const anthropic = new Anthropic({ apiKey: CLAUDE_API_KEY });
@@ -50,27 +52,21 @@ export default async function handler(req, res) {
       }
 
       if (!allowedRoles.includes(msg.role)) {
-        return res
-          .status(400)
-          .json({
-            error: `Mensagem ${i}: role deve ser "user" ou "assistant"`,
-          });
+        return res.status(400).json({
+          error: `Mensagem ${i}: role deve ser "user" ou "assistant"`,
+        });
       }
 
       if (typeof msg.content !== "string" || msg.content.trim().length === 0) {
-        return res
-          .status(400)
-          .json({
-            error: `Mensagem ${i}: content deve ser uma string nao vazia`,
-          });
+        return res.status(400).json({
+          error: `Mensagem ${i}: content deve ser uma string nao vazia`,
+        });
       }
 
       if (msg.content.length > 10000) {
-        return res
-          .status(400)
-          .json({
-            error: `Mensagem ${i}: content excede o limite de 10000 caracteres`,
-          });
+        return res.status(400).json({
+          error: `Mensagem ${i}: content excede o limite de 10000 caracteres`,
+        });
       }
     }
 

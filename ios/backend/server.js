@@ -689,11 +689,9 @@ app.post(
         const app = (appContext || parameters?.app || "firefox").toLowerCase();
         const appCmd = SAFE_APPS[app];
         if (!appCmd)
-          return res
-            .status(400)
-            .json({
-              error: `App "${app}" não está na lista permitida. Apps: ${Object.keys(SAFE_APPS).join(", ")}`,
-            });
+          return res.status(400).json({
+            error: `App "${app}" não está na lista permitida. Apps: ${Object.keys(SAFE_APPS).join(", ")}`,
+          });
         args = ["exec", name, "bash", "-c", `export DISPLAY=:1 && ${appCmd} &`];
       } else {
         return res.status(400).json({ error: "Ação não reconhecida" });
@@ -1010,7 +1008,9 @@ app.post("/validate-apple-receipt", authenticateUser, async (req, res) => {
     const userId = req.user.id;
 
     if (!transactionId || !productId) {
-      return res.status(400).json({ error: "transactionId e productId são obrigatórios" });
+      return res
+        .status(400)
+        .json({ error: "transactionId e productId são obrigatórios" });
     }
 
     // Check if this transaction was already processed (idempotency)
@@ -1021,7 +1021,11 @@ app.post("/validate-apple-receipt", authenticateUser, async (req, res) => {
       .single();
 
     if (existing) {
-      return res.json({ success: true, message: "Transação já processada", duplicate: true });
+      return res.json({
+        success: true,
+        message: "Transação já processada",
+        duplicate: true,
+      });
     }
 
     // Determine what was purchased
@@ -1068,9 +1072,10 @@ app.post("/validate-apple-receipt", authenticateUser, async (req, res) => {
         stripe_payment_id: `apple_${transactionId}`,
       });
 
-      console.log(`[Apple IAP] +${amount} créditos para user ${userId.substring(0, 8)}`);
+      console.log(
+        `[Apple IAP] +${amount} créditos para user ${userId.substring(0, 8)}`,
+      );
       res.json({ success: true, creditsAdded: amount });
-
     } else if (planMap[productId]) {
       // Subscription purchase
       const { plan, credits } = planMap[productId];
@@ -1097,9 +1102,10 @@ app.post("/validate-apple-receipt", authenticateUser, async (req, res) => {
         stripe_payment_id: `apple_${transactionId}`,
       });
 
-      console.log(`[Apple IAP] Plano ${plan} ativado para user ${userId.substring(0, 8)}`);
+      console.log(
+        `[Apple IAP] Plano ${plan} ativado para user ${userId.substring(0, 8)}`,
+      );
       res.json({ success: true, plan, credits });
-
     } else {
       res.status(400).json({ error: `Produto não reconhecido: ${productId}` });
     }

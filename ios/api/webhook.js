@@ -1,9 +1,21 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 
-const { STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SUPABASE_URL, SUPABASE_SERVICE_KEY } = process.env;
-if (!STRIPE_SECRET_KEY || !STRIPE_WEBHOOK_SECRET || !SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-  throw new Error("Missing required env vars: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SUPABASE_URL, SUPABASE_SERVICE_KEY");
+const {
+  STRIPE_SECRET_KEY,
+  STRIPE_WEBHOOK_SECRET,
+  SUPABASE_URL,
+  SUPABASE_SERVICE_KEY,
+} = process.env;
+if (
+  !STRIPE_SECRET_KEY ||
+  !STRIPE_WEBHOOK_SECRET ||
+  !SUPABASE_URL ||
+  !SUPABASE_SERVICE_KEY
+) {
+  throw new Error(
+    "Missing required env vars: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SUPABASE_URL, SUPABASE_SERVICE_KEY",
+  );
 }
 
 const stripe = new Stripe(STRIPE_SECRET_KEY);
@@ -33,11 +45,7 @@ export default async function handler(req, res) {
 
   let event;
   try {
-    event = stripe.webhooks.constructEvent(
-      buf,
-      sig,
-      STRIPE_WEBHOOK_SECRET,
-    );
+    event = stripe.webhooks.constructEvent(buf, sig, STRIPE_WEBHOOK_SECRET);
   } catch (err) {
     console.error("Webhook signature failed:", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
@@ -74,7 +82,10 @@ export default async function handler(req, res) {
         });
         if (rpcError) {
           // Fallback: read-then-update (less safe but better than failing silently)
-          console.error("RPC increment_credits failed, using fallback:", rpcError.message);
+          console.error(
+            "RPC increment_credits failed, using fallback:",
+            rpcError.message,
+          );
           const { data: profile } = await supabase
             .from("profiles")
             .select("credits")
