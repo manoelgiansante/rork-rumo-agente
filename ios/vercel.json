@@ -21,18 +21,6 @@
       "headers": [
         { "key": "Cache-Control", "value": "no-store" }
       ]
-    },
-    {
-      "source": "/(.*)\\.html",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=3600" }
-      ]
-    },
-    {
-      "source": "/(.*)\\.(?:js|css)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=86400" }
-      ]
     }
   ],
   "rewrites": [
