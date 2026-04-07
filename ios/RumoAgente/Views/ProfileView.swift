@@ -219,7 +219,9 @@ struct ProfileView: View {
     }
 
     private var appVersion: some View {
-        Text("Rumo Agente v1.0.0")
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        return Text("Rumo Agente v\(version) (\(build))")
             .font(.caption)
             .foregroundStyle(Theme.subtleText.opacity(0.5))
             .padding(.top, 8)

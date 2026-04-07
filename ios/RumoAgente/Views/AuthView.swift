@@ -106,6 +106,8 @@ struct AuthView: View {
                                     .font(.title3)
                                     .foregroundStyle(agreedToTerms ? Theme.accent : Theme.subtleText)
                             }
+                            .accessibilityLabel(agreedToTerms ? "Termos aceitos" : "Aceitar termos")
+                            .accessibilityHint("Toque para aceitar os termos de uso e política de privacidade")
 
                             Text("Li e concordo com a [Política de Privacidade](https://agente.agrorumo.com/privacidade) e os [Termos de Uso](https://agente.agrorumo.com/termos)")
                                 .font(.caption)
@@ -168,6 +170,7 @@ struct AuthView: View {
                             .background(.white, in: .rect(cornerRadius: 14))
                         }
                         .disabled(viewModel.isLoading)
+                        .accessibilityLabel("Continuar com Apple")
 
                         Button {
                             Task { await viewModel.signInWithGoogle() }
@@ -184,6 +187,7 @@ struct AuthView: View {
                             .background(Color(red: 0.15, green: 0.15, blue: 0.18), in: .rect(cornerRadius: 14))
                         }
                         .disabled(viewModel.isLoading)
+                        .accessibilityLabel("Continuar com Google")
                     }
                     .padding(.horizontal, 24)
 
@@ -283,6 +287,7 @@ struct AuthSecureField: View {
                 Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
                     .foregroundStyle(Theme.subtleText)
             }
+            .accessibilityLabel(showPassword ? "Ocultar senha" : "Mostrar senha")
         }
         .padding(16)
         .background(Theme.cardBg, in: .rect(cornerRadius: 14))

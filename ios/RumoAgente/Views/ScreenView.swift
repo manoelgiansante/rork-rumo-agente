@@ -117,6 +117,7 @@ struct ScreenView: View {
                             .foregroundStyle(.white.opacity(0.7))
                             .padding(16)
                     }
+                    .accessibilityLabel("Sair da tela cheia")
                 }
             }
         }
@@ -139,10 +140,12 @@ struct ScreenView: View {
                 .fill(isConnected ? .green : .red)
                 .frame(width: 8, height: 8)
                 .shadow(color: isConnected ? .green.opacity(0.5) : .clear, radius: 4)
+                .accessibilityHidden(true)
 
             Text(isConnected ? "Conectado" : "Desconectado")
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(.white)
+                .accessibilityLabel(isConnected ? "Status: conectado ao desktop" : "Status: desconectado do desktop")
 
             if let error = errorMessage {
                 Text(error)

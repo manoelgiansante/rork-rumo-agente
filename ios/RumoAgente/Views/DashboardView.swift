@@ -115,6 +115,7 @@ struct DashboardView: View {
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
                     .background(viewModel.agentOnline ? Color.green.opacity(0.1) : Color.orange.opacity(0.1), in: .capsule)
+                    .accessibilityLabel(viewModel.agentOnline ? "Agente pronto" : "Agente iniciando")
                 }
                 Text("Envie comandos pelo chat e o agente executa para você")
                     .font(.caption)
@@ -165,6 +166,7 @@ struct DashboardView: View {
                 lineWidth: 6,
                 size: 52
             )
+            .accessibilityLabel("Uso de créditos: \(viewModel.creditsUsedToday) de \(supabase.currentUser?.plan.includedCredits ?? 10)")
         }
         .padding(20)
         .background(

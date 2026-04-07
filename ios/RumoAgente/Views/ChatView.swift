@@ -33,6 +33,7 @@ struct ChatView: View {
                                 Image(systemName: "xmark")
                                     .font(.caption2)
                             }
+                            .accessibilityLabel("Fechar alerta de erro")
                         }
                         .foregroundStyle(.white)
                         .padding(.horizontal, 16)
@@ -182,6 +183,7 @@ struct ChatView: View {
                     .foregroundStyle(viewModel.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Theme.subtleText : Theme.accent)
             }
             .disabled(viewModel.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isTyping)
+            .accessibilityLabel("Enviar mensagem")
             .sensoryFeedback(.impact(weight: .light), trigger: viewModel.messages.count)
         }
         .padding(.horizontal, 16)
@@ -268,6 +270,7 @@ struct MessageBubble: View {
                             }
                     }
                     .frame(maxWidth: 260)
+                    .accessibilityLabel("Ampliar captura de tela")
                 }
 
                 if message.isConfirmation && !isUser {
@@ -358,6 +361,7 @@ struct ScreenshotFullView: View {
                     .foregroundStyle(.white.opacity(0.7))
                     .padding(16)
             }
+            .accessibilityLabel("Fechar imagem")
         }
         .statusBarHidden()
     }

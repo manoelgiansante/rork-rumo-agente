@@ -57,6 +57,6 @@ export default async function handler(req, res) {
     res.json({ url: session.url, sessionId: session.id });
   } catch (err) {
     console.error("Checkout error:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Erro ao criar sessão de pagamento" });
   }
 }
