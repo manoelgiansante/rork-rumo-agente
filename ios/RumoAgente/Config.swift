@@ -20,6 +20,19 @@ enum Config {
 
     // MARK: - App Info
     static let appBundleID = "app.rork.rumoagente"
+    // swiftlint:disable:next force_unwrapping — compile-time constant, guaranteed valid
     static let privacyPolicyURL = URL(string: "https://agente.agrorumo.com/privacidade")!
+    // swiftlint:disable:next force_unwrapping — compile-time constant, guaranteed valid
     static let termsOfServiceURL = URL(string: "https://agente.agrorumo.com/termos")!
+
+    // MARK: - Timeouts & Limits
+    static let defaultRequestTimeout: TimeInterval = 30
+    static let chatRequestTimeout: TimeInterval = 60
+    static let agentRequestTimeout: TimeInterval = 120
+    static let screenshotRefreshInterval: TimeInterval = 1.5
+    static let screenshotRequestTimeout: TimeInterval = 10
+    static let maxChatRetries = 2
+    static let maxConsecutiveScreenErrors = 5
+    static let maxConsecutiveDesktopErrors = 3
+    static let desktopBootDelay: TimeInterval = 4
 }

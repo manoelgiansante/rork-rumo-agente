@@ -121,6 +121,12 @@ struct ScreenView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .onAppear {
+            // Re-check desktop state when returning to this tab
+            if isConnected, refreshTask == nil, let token = supabase.authTokenValue {
+                startRefreshing(token: token)
+            }
+        }
         .onDisappear {
             refreshTask?.cancel()
             refreshTask = nil
@@ -257,7 +263,7 @@ struct ScreenView: View {
                         return
                     }
 
-                    try await Task.sleep(for: .seconds(4))
+                    try await Task.sleep(for: .seconds(Config.desktopBootDelay))
                 }
 
                 await fetchScreenshot(token: token)
@@ -303,7 +309,7 @@ struct ScreenView: View {
         refreshTask = Task {
             while !Task.isCancelled {
                 await fetchScreenshot(token: token)
-                try? await Task.sleep(for: .seconds(1.5))
+                try? await Task.sleep(for: .seconds(Config.screenshotRefreshInterval))
             }
         }
     }
@@ -312,7 +318,7 @@ struct ScreenView: View {
         guard let url = URL(string: "\(backendURL)/screenshot") else { return }
         var request = URLRequest(url: url)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.timeoutInterval = 10
+        request.timeoutInterval = Config.screenshotRequestTimeout
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
@@ -332,7 +338,7 @@ struct ScreenView: View {
             if httpResponse.statusCode == 404 {
                 // Desktop not running — auto-reconnect
                 consecutiveErrors += 1
-                if consecutiveErrors >= 3 {
+                if consecutiveErrors >= Config.maxConsecutiveDesktopErrors {
                     errorMessage = "Desktop parou. Reconectando..."
                     refreshTask?.cancel()
                     try? await Task.sleep(for: .seconds(2))
@@ -348,7 +354,7 @@ struct ScreenView: View {
             errorMessage = nil
         } catch {
             consecutiveErrors += 1
-            if consecutiveErrors >= 5 {
+            if consecutiveErrors >= Config.maxConsecutiveScreenErrors {
                 errorMessage = "Conexão instável. Verifique sua internet."
             }
             // Will retry on next cycle

@@ -28,7 +28,7 @@ class ChatViewModel {
         ]
     }
 
-    private let maxRetries = 2
+    private let maxRetries = Config.maxChatRetries
 
     func sendMessage() async {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)

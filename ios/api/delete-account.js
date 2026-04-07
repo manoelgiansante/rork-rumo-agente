@@ -1,9 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
-);
+const { SUPABASE_URL, SUPABASE_SERVICE_KEY } = process.env;
+if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+  throw new Error(
+    "Missing required env vars: SUPABASE_URL, SUPABASE_SERVICE_KEY",
+  );
+}
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 export default async function handler(req, res) {
   if (req.method !== "DELETE")

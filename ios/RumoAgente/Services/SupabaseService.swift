@@ -8,6 +8,11 @@ class SupabaseService {
 
     private let baseURL: String
     private let anonKey: String
+    private let iso8601Decoder: JSONDecoder = {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
+    }()
 
     init() {
         self.baseURL = Config.EXPO_PUBLIC_SUPABASE_URL
@@ -20,6 +25,15 @@ class SupabaseService {
             throw ServiceError.networkError
         }
         return url
+    }
+
+    /// Build an authenticated request for the Supabase REST API
+    private func makeRESTRequest(urlString: String) -> URLRequest? {
+        guard let token = authToken, let url = URL(string: urlString) else { return nil }
+        var request = URLRequest(url: url)
+        request.setValue(anonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        return request
     }
 
     var authTokenValue: String? {
@@ -139,14 +153,14 @@ class SupabaseService {
 
     func refreshSession() async -> Bool {
         guard let token = refreshToken else { return false }
-        let url = try makeURL("/auth/v1/token?grant_type=refresh_token")
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(anonKey, forHTTPHeaderField: "apikey")
-
-        let body: [String: String] = ["refresh_token": token]
         do {
+            let url = try makeURL("/auth/v1/token?grant_type=refresh_token")
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue(anonKey, forHTTPHeaderField: "apikey")
+
+            let body: [String: String] = ["refresh_token": token]
             request.httpBody = try JSONEncoder().encode(body)
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
@@ -166,12 +180,11 @@ class SupabaseService {
 
     private func loadUserProfile() async {
         guard let token = authToken else { return }
-        let url = try makeURL("/auth/v1/user")
-        var request = URLRequest(url: url)
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue(anonKey, forHTTPHeaderField: "apikey")
-
         do {
+            let url = try makeURL("/auth/v1/user")
+            var request = URLRequest(url: url)
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            request.setValue(anonKey, forHTTPHeaderField: "apikey")
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse else { return }
 
@@ -333,13 +346,8 @@ class SupabaseService {
     private var fetchTransactionsRetried = false
     private var fetchAppsRetried = false
     func fetchProfile() async {
-        guard let token = authToken, let userId = currentUser?.id else { return }
-        let urlString = "\(baseURL)/rest/v1/profiles?id=eq.\(userId)&select=*&limit=1"
-        guard let url = URL(string: urlString) else { return }
-
-        var request = URLRequest(url: url)
-        request.setValue(anonKey, forHTTPHeaderField: "apikey")
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        guard let userId = currentUser?.id else { return }
+        guard let request = makeRESTRequest(urlString: "\(baseURL)/rest/v1/profiles?id=eq.\(userId)&select=*&limit=1") else { return }
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
@@ -357,9 +365,7 @@ class SupabaseService {
 
             guard httpResponse.statusCode == 200 else { return }
 
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            let profiles = try decoder.decode([UserProfile].self, from: data)
+            let profiles = try iso8601Decoder.decode([UserProfile].self, from: data)
             if let profile = profiles.first {
                 currentUser = profile
             }
@@ -369,13 +375,8 @@ class SupabaseService {
     }
 
     func fetchTasks() async -> [AgentTask] {
-        guard let token = authToken, let userId = currentUser?.id else { return [] }
-        let urlString = "\(baseURL)/rest/v1/agent_tasks?user_id=eq.\(userId)&select=*&order=created_at.desc&limit=20"
-        guard let url = URL(string: urlString) else { return [] }
-
-        var request = URLRequest(url: url)
-        request.setValue(anonKey, forHTTPHeaderField: "apikey")
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        guard let userId = currentUser?.id else { return [] }
+        guard let request = makeRESTRequest(urlString: "\(baseURL)/rest/v1/agent_tasks?user_id=eq.\(userId)&select=*&order=created_at.desc&limit=20") else { return [] }
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
@@ -393,9 +394,7 @@ class SupabaseService {
 
             guard httpResponse.statusCode == 200 else { return [] }
 
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            return try decoder.decode([AgentTask].self, from: data)
+            return try iso8601Decoder.decode([AgentTask].self, from: data)
         } catch {
             return []
         }
@@ -413,7 +412,7 @@ class SupabaseService {
         request.httpMethod = "DELETE"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.timeoutInterval = 30
+        request.timeoutInterval = Config.defaultRequestTimeout
 
         let (data, response): (Data, URLResponse)
         do {
@@ -432,13 +431,8 @@ class SupabaseService {
     }
 
     func fetchTransactions() async -> [Transaction] {
-        guard let token = authToken, let userId = currentUser?.id else { return [] }
-        let urlString = "\(baseURL)/rest/v1/credit_transactions?user_id=eq.\(userId)&select=*&order=created_at.desc&limit=50"
-        guard let url = URL(string: urlString) else { return [] }
-
-        var request = URLRequest(url: url)
-        request.setValue(anonKey, forHTTPHeaderField: "apikey")
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        guard let userId = currentUser?.id else { return [] }
+        guard let request = makeRESTRequest(urlString: "\(baseURL)/rest/v1/credit_transactions?user_id=eq.\(userId)&select=*&order=created_at.desc&limit=50") else { return [] }
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
@@ -456,22 +450,14 @@ class SupabaseService {
 
             guard httpResponse.statusCode == 200 else { return [] }
 
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            return try decoder.decode([Transaction].self, from: data)
+            return try iso8601Decoder.decode([Transaction].self, from: data)
         } catch {
             return []
         }
     }
 
     func fetchApps() async -> [CloudApp] {
-        guard let token = authToken else { return [] }
-        let urlString = "\(baseURL)/rest/v1/cloud_apps?select=*&order=name.asc"
-        guard let url = URL(string: urlString) else { return [] }
-
-        var request = URLRequest(url: url)
-        request.setValue(anonKey, forHTTPHeaderField: "apikey")
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        guard let request = makeRESTRequest(urlString: "\(baseURL)/rest/v1/cloud_apps?select=*&order=name.asc") else { return [] }
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
@@ -489,9 +475,7 @@ class SupabaseService {
 
             guard httpResponse.statusCode == 200 else { return [] }
 
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            return try decoder.decode([CloudApp].self, from: data)
+            return try iso8601Decoder.decode([CloudApp].self, from: data)
         } catch {
             return []
         }
