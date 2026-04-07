@@ -6,6 +6,7 @@ struct RumoAgenteApp: App {
     @State private var claudeService = ClaudeService()
     @State private var agentService = AgentService()
     @AppStorage("hasOnboarded") private var hasOnboarded: Bool = false
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
@@ -34,7 +35,16 @@ struct RumoAgenteApp: App {
             }
             .onOpenURL { url in
                 Task {
-                    try? await supabase.handleOAuthCallback(url: url)
+                    do {
+                        try await supabase.handleOAuthCallback(url: url)
+                    } catch {
+                        print("[OAuth] Callback error: \(error.localizedDescription)")
+                    }
+                }
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active {
+                    Task { await supabase.checkSession() }
                 }
             }
         }

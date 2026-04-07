@@ -71,9 +71,17 @@ export default async function handler(req, res) {
       ]);
     }
 
-    await supabase.from('profiles')
-      .update({ credits: profile.credits - 1 })
-      .eq('user_id', user.id);
+    // Debit credit atomically
+    const { error: rpcError } = await supabase.rpc('decrement_credits', {
+      p_user_id: user.id,
+      p_amount: 1
+    });
+    if (rpcError) {
+      // Fallback to optimistic update
+      await supabase.from('profiles')
+        .update({ credits: Math.max(0, profile.credits - 1) })
+        .eq('user_id', user.id);
+    }
 
     await supabase.from('credit_transactions').insert({
       user_id: user.id, amount: -1, type: 'usage', description: 'Mensagem de chat'

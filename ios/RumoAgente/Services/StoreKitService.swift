@@ -177,15 +177,21 @@ class StoreKitService {
             let (data, response) = try await URLSession.shared.data(for: request)
 
             if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                #if DEBUG
                 if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                    let success = json["success"] as? Bool, success {
                     print("[StoreKit] Server validation OK for \(transaction.productID)")
                 }
+                #endif
             } else {
+                #if DEBUG
                 print("[StoreKit] Server validation failed: HTTP \((response as? HTTPURLResponse)?.statusCode ?? 0)")
+                #endif
             }
         } catch {
+            #if DEBUG
             print("[StoreKit] Server validation error: \(error.localizedDescription)")
+            #endif
         }
     }
 

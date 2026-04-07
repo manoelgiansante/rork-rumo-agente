@@ -12,6 +12,9 @@ enum Config {
     // MARK: - Backend VPS
     static let EXPO_PUBLIC_AGENT_BACKEND_URL = "https://vps.agrorumo.com"
 
+    // MARK: - Vercel API
+    static let VERCEL_API_URL = "https://rork-rumo-agente.vercel.app/api"
+
     // MARK: - App Store Product IDs
     static let appStoreSubscriptionGroupID = "rumoagente_subscriptions"
 

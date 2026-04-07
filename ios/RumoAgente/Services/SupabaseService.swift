@@ -266,13 +266,13 @@ class SupabaseService {
     }
 
     private func exchangeCodeForSession(code: String) async throws {
-        let url = URL(string: "\(baseURL)/auth/v1/token?grant_type=pkce")!
+        let url = URL(string: "\(baseURL)/auth/v1/token?grant_type=authorization_code")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(anonKey, forHTTPHeaderField: "apikey")
 
-        let body: [String: String] = ["auth_code": code]
+        let body: [String: String] = ["auth_code": code, "code_verifier": ""]
         request.httpBody = try JSONEncoder().encode(body)
 
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -320,6 +320,10 @@ class SupabaseService {
         }
     }
 
+    private var fetchProfileRetried = false
+    private var fetchTasksRetried = false
+    private var fetchTransactionsRetried = false
+    private var fetchAppsRetried = false
     func fetchProfile() async {
         guard let token = authToken, let userId = currentUser?.id else { return }
         let urlString = "\(baseURL)/rest/v1/profiles?id=eq.\(userId)&select=*&limit=1"
@@ -333,11 +337,13 @@ class SupabaseService {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse else { return }
 
-            // Auto-refresh token on 401
+            // Auto-refresh token on 401 (one retry only)
             if httpResponse.statusCode == 401 {
-                if await refreshSession() {
-                    await fetchProfile() // Retry with new token
+                if !fetchProfileRetried, await refreshSession() {
+                    fetchProfileRetried = true
+                    await fetchProfile()
                 }
+                fetchProfileRetried = false
                 return
             }
 
@@ -368,7 +374,12 @@ class SupabaseService {
             guard let httpResponse = response as? HTTPURLResponse else { return [] }
 
             if httpResponse.statusCode == 401 {
-                if await refreshSession() { return await fetchTasks() }
+                if !fetchTasksRetried, await refreshSession() {
+                    fetchTasksRetried = true
+                    let result = await fetchTasks()
+                    fetchTasksRetried = false
+                    return result
+                }
                 return []
             }
 
@@ -387,7 +398,7 @@ class SupabaseService {
             throw ServiceError.authError("Usuário não autenticado")
         }
 
-        let url = URL(string: "https://rork-rumo-agente.vercel.app/api/delete-account")!
+        let url = URL(string: "\(Config.VERCEL_API_URL)/delete-account")!
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -424,7 +435,12 @@ class SupabaseService {
             guard let httpResponse = response as? HTTPURLResponse else { return [] }
 
             if httpResponse.statusCode == 401 {
-                if await refreshSession() { return await fetchTransactions() }
+                if !fetchTransactionsRetried, await refreshSession() {
+                    fetchTransactionsRetried = true
+                    let result = await fetchTransactions()
+                    fetchTransactionsRetried = false
+                    return result
+                }
                 return []
             }
 
@@ -452,7 +468,12 @@ class SupabaseService {
             guard let httpResponse = response as? HTTPURLResponse else { return [] }
 
             if httpResponse.statusCode == 401 {
-                if await refreshSession() { return await fetchApps() }
+                if !fetchAppsRetried, await refreshSession() {
+                    fetchAppsRetried = true
+                    let result = await fetchApps()
+                    fetchAppsRetried = false
+                    return result
+                }
                 return []
             }
 
